@@ -16,10 +16,8 @@ export default function Footer() {
                     {/* ── Brand Column ── */}
                     <div>
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">S</span>
-                            </div>
-                            <span className="text-lg font-bold tracking-tight">Shopify</span>
+                            <img src="/favicon.svg" alt="Urbanova Logo" className="w-8 h-8" />
+                            <span className="text-lg font-bold tracking-tight">Urbanova</span>
                         </div>
                         <p className="text-sm text-gray-400 leading-relaxed mb-5">
                             Curated essentials for modern living. Premium products designed with quality craftsmanship.
@@ -115,7 +113,7 @@ export default function Footer() {
                 {/* ── Bottom Divider & Copyright ── */}
                 <div className="border-t border-white/10 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <p className="text-xs text-gray-500">
-                        © {new Date().getFullYear()} Shopify Store. All rights reserved.
+                        © {new Date().getFullYear()} Urbanova Store. All rights reserved.
                     </p>
                     <div className="flex items-center gap-4">
                         <a href="#" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</a>

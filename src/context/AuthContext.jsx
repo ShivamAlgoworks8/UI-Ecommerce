@@ -26,13 +26,13 @@ export function useAuth() {
 
 /**
  * AuthProvider — wraps the app and provides auth state.
- * Stores registered users in localStorage under "shopify_users"
- * and the current session under "shopify_current_user".
+ * Stores registered users in localStorage under "urbanova_users"
+ * and the current session under "urbanova_current_user".
  */
 export function AuthProvider({ children }) {
     // Initialize state from localStorage (persisted session)
     const [user, setUser] = useState(() => {
-        const saved = localStorage.getItem("shopify_current_user");
+        const saved = localStorage.getItem("urbanova_current_user");
         return saved ? JSON.parse(saved) : null;
     });
 
@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
      * getUsers — retrieves all registered users from localStorage.
      */
     const getUsers = () => {
-        const users = localStorage.getItem("shopify_users");
+        const users = localStorage.getItem("urbanova_users");
         return users ? JSON.parse(users) : [];
     };
 
@@ -70,12 +70,12 @@ export function AuthProvider({ children }) {
 
         // Save to "database"
         users.push(newUser);
-        localStorage.setItem("shopify_users", JSON.stringify(users));
+        localStorage.setItem("urbanova_users", JSON.stringify(users));
 
         // Auto-login after signup
         const sessionUser = { id: newUser.id, name: newUser.name, email: newUser.email };
         setUser(sessionUser);
-        localStorage.setItem("shopify_current_user", JSON.stringify(sessionUser));
+        localStorage.setItem("urbanova_current_user", JSON.stringify(sessionUser));
 
         return { success: true, message: "Account created successfully!" };
     };
@@ -99,7 +99,7 @@ export function AuthProvider({ children }) {
 
         const sessionUser = { id: found.id, name: found.name, email: found.email };
         setUser(sessionUser);
-        localStorage.setItem("shopify_current_user", JSON.stringify(sessionUser));
+        localStorage.setItem("urbanova_current_user", JSON.stringify(sessionUser));
 
         return { success: true, message: "Logged in successfully!" };
     };
@@ -109,7 +109,7 @@ export function AuthProvider({ children }) {
      */
     const logout = () => {
         setUser(null);
-        localStorage.removeItem("shopify_current_user");
+        localStorage.removeItem("urbanova_current_user");
     };
 
     const value = {

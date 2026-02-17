@@ -22,11 +22,9 @@ export default function Navbar({ cartCount }) {
 
                 {/* ── Brand Logo ── */}
                 <Link to="/" className="flex items-center gap-2 group shrink-0">
-                    <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-                        <span className="text-white font-bold text-sm">S</span>
-                    </div>
+                    <img src="/favicon.svg" alt="Urbanova Logo" className="w-8 h-8 transition-transform duration-300 group-hover:scale-105" />
                     <span className="text-lg sm:text-xl font-bold tracking-tight text-white">
-                        Shopify
+                        Urbanova
                     </span>
                 </Link>
 

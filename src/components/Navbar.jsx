@@ -1,15 +1,11 @@
-/**
- * Navbar Component
- * ────────────────
- * Sticky dark header with active page indicator.
- * Glassmorphism effect on scroll for modern feel.
- * Layout: Logo | Search bar | Nav links + Cart
- */
-
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
 
 export default function Navbar({ cartCount }) {
     const { pathname } = useLocation();
+    const { user, logout, isAuthenticated } = useAuth();
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
     // Helper — returns active styles if path matches
     const navLinkClass = (path) => {
@@ -39,8 +35,8 @@ export default function Navbar({ cartCount }) {
                     <div className="relative w-full">
                         <input
                             type="text"
-                            placeholder="Search for products, brands and more"
-                            className="w-full px-4 py-2 pl-10 rounded-lg bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+                            placeholder="Search for products..."
+                            className="w-full px-4 py-2 pl-10 rounded-lg bg-white/10 border border-white/10 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -88,18 +84,62 @@ export default function Navbar({ cartCount }) {
                             </span>
                         )}
                     </Link>
+
+                    {/* Auth Section */}
+                    <div className="h-6 w-px bg-white/10 mx-1" />
+
+                    {isAuthenticated ? (
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                className="flex items-center gap-2 text-white/80 hover:text-white transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent font-bold text-xs uppercase">
+                                    {user.name.charAt(0)}
+                                </div>
+                                <span className="text-sm font-medium max-w-[100px] truncate">{user.name}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isUserMenuOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)}></div>
+                                    <div className="absolute right-0 mt-2 w-48 py-2 bg-white rounded-xl shadow-xl z-20 border border-gray-100 animate-scale-in origin-top-right">
+                                        <div className="px-4 py-2 border-b border-gray-50">
+                                            <p className="text-xs text-gray-400">Signed in as</p>
+                                            <p className="text-sm font-semibold text-gray-900 truncate">{user.email}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                logout();
+                                                setIsUserMenuOpen(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Logout
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <Link
+                            to="/login"
+                            className="px-5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-all duration-200 border border-white/10"
+                        >
+                            Login
+                        </Link>
+                    )}
                 </div>
 
                 {/* ── Mobile Icons ── */}
                 <div className="flex md:hidden items-center gap-4">
-                    <button className="text-white/60 hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </button>
-                    <Link to="/products" className={navLinkClass("/products")}>
-                        Shop
-                    </Link>
                     <Link to="/cart" className={`relative ${navLinkClass("/cart")}`}>
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -121,8 +161,21 @@ export default function Navbar({ cartCount }) {
                             </span>
                         )}
                     </Link>
+
+                    {isAuthenticated ? (
+                        <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold ring-2 ring-white/10" onClick={logout}>
+                            {user.name.charAt(0)}
+                        </div>
+                    ) : (
+                        <Link to="/login" className="text-white/60 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </Link>
+                    )}
                 </div>
             </div>
         </nav>
     );
 }
+

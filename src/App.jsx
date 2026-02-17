@@ -15,6 +15,9 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+// Auth Context
+import { AuthProvider } from "./context/AuthContext";
+
 // Layout components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -24,6 +27,8 @@ import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 
 // Component to scroll to top on route change
 import ScrollToTop from "./components/ScrollToTop";
@@ -84,43 +89,48 @@ export default function App() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <Router>
-      <ScrollToTop />
-      <div className="min-h-screen flex flex-col">
-        {/* ── Sticky Navbar ── */}
-        <Navbar cartCount={cartCount} />
+    <AuthProvider>
+      <Router>
+        <ScrollToTop />
+        <div className="min-h-screen flex flex-col">
+          {/* ── Sticky Navbar ── */}
+          <Navbar cartCount={cartCount} />
 
-        {/* ── Page Content (grows to fill remaining space) ── */}
-        <main className="flex-grow">
-          <Routes>
-            <Route
-              path="/"
-              element={<HomePage onAddToCart={addToCart} />}
-            />
-            <Route
-              path="/products"
-              element={<ProductsPage onAddToCart={addToCart} />}
-            />
-            <Route
-              path="/product/:id"
-              element={<ProductDetailPage onAddToCart={addToCart} />}
-            />
-            <Route
-              path="/cart"
-              element={
-                <CartPage
-                  cart={cart}
-                  onUpdateQuantity={updateQuantity}
-                  onRemoveFromCart={removeFromCart}
-                />
-              }
-            />
-          </Routes>
-        </main>
+          {/* ── Page Content (grows to fill remaining space) ── */}
+          <main className="flex-grow">
+            <Routes>
+              <Route
+                path="/"
+                element={<HomePage onAddToCart={addToCart} />}
+              />
+              <Route
+                path="/products"
+                element={<ProductsPage onAddToCart={addToCart} />}
+              />
+              <Route
+                path="/product/:id"
+                element={<ProductDetailPage onAddToCart={addToCart} />}
+              />
+              <Route
+                path="/cart"
+                element={
+                  <CartPage
+                    cart={cart}
+                    onUpdateQuantity={updateQuantity}
+                    onRemoveFromCart={removeFromCart}
+                  />
+                }
+              />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+            </Routes>
+          </main>
 
-        {/* ── Footer ── */}
-        <Footer />
-      </div>
-    </Router>
+          {/* ── Footer ── */}
+          <Footer />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
+

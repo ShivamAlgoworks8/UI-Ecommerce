@@ -8,7 +8,7 @@
 import ProductCard from "../components/ProductCard";
 import products from "../data/products";
 
-export default function ProductsPage({ onAddToCart }) {
+export default function ProductsPage({ onAddToCart, wishlist, onToggleWishlist }) {
     return (
         <div>
             {/* ── Page Header ── */}
@@ -37,6 +37,8 @@ export default function ProductsPage({ onAddToCart }) {
                                 key={product.id}
                                 product={product}
                                 onAddToCart={onAddToCart}
+                                wishlist={wishlist}
+                                onToggleWishlist={onToggleWishlist}
                                 animationDelay={`delay-${(index + 1) * 100}`}
                             />
                         ))}

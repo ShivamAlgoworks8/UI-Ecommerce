@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 
-export default function Navbar({ cartCount }) {
+export default function Navbar({ cartCount, wishlistCount }) {
     const { pathname } = useLocation();
     const { user, logout, isAuthenticated } = useAuth();
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -56,6 +56,18 @@ export default function Navbar({ cartCount }) {
                     </Link>
                     <Link to="/products" className={navLinkClass("/products")}>
                         Products
+                    </Link>
+                    <Link
+                        to="/wishlist"
+                        className={`relative flex items-center gap-1.5 ${navLinkClass("/wishlist")}`}
+                    >
+                        <span aria-hidden="true" className="text-base leading-none">♥</span>
+                        Wishlist
+                        {wishlistCount > 0 && (
+                            <span className="absolute -top-2 -right-4 bg-accent text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-scale-in border-2 border-primary">
+                                {wishlistCount}
+                            </span>
+                        )}
                     </Link>
                     <Link
                         to="/cart"
@@ -138,6 +150,14 @@ export default function Navbar({ cartCount }) {
 
                 {/* ── Mobile Icons ── */}
                 <div className="flex md:hidden items-center gap-4">
+                    <Link to="/wishlist" className={`relative ${navLinkClass("/wishlist")}`} aria-label="Wishlist">
+                        <span aria-hidden="true" className="text-lg leading-none">♥</span>
+                        {wishlistCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-accent text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-primary">
+                                {wishlistCount}
+                            </span>
+                        )}
+                    </Link>
                     <Link to="/cart" className={`relative ${navLinkClass("/cart")}`}>
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

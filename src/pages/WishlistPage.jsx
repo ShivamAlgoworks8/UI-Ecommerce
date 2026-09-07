@@ -1,0 +1,64 @@
+import { Link } from "react-router-dom";
+import ProductCard from "../components/ProductCard";
+
+export default function WishlistPage({ wishlist, onAddToCart, onToggleWishlist }) {
+    if (wishlist.length === 0) {
+        return (
+            <div className="min-h-[50vh] flex items-center justify-center px-6">
+                <div className="text-center animate-fade-in-up max-w-sm">
+                    <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-surface-soft flex items-center justify-center">
+                        <span aria-hidden="true" className="text-3xl text-text-muted">♡</span>
+                    </div>
+                    <h2 className="text-xl font-bold text-primary mb-2">Your Wishlist is Empty</h2>
+                    <p className="text-sm text-text-secondary mb-6 leading-relaxed">
+                        Save your favorite products here to find them later.
+                    </p>
+                    <Link
+                        to="/products"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover transition-all duration-300"
+                    >
+                        Continue Shopping
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <section className="w-full bg-surface-soft border-b border-border-light py-8 lg:py-10 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent mb-1 block">
+                        Saved for Later
+                    </span>
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                        <h1 className="text-2xl lg:text-3xl font-bold text-primary tracking-tight">My Wishlist</h1>
+                        <p className="text-sm text-text-muted">
+                            {wishlist.length} {wishlist.length === 1 ? "item" : "items"} saved
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section className="w-full bg-white py-8 lg:py-12 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                        {wishlist.map((product, index) => (
+                            <ProductCard
+                                key={product.id}
+                                product={product}
+                                onAddToCart={onAddToCart}
+                                wishlist={wishlist}
+                                onToggleWishlist={onToggleWishlist}
+                                animationDelay={`delay-${(index + 1) * 100}`}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
+}

@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import products from "../data/products";
 
-export default function HomePage({ onAddToCart }) {
+export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
     const featuredProducts = products.slice(0, 4);
 
     return (
@@ -99,6 +99,8 @@ export default function HomePage({ onAddToCart }) {
                                 key={product.id}
                                 product={product}
                                 onAddToCart={onAddToCart}
+                                wishlist={wishlist}
+                                onToggleWishlist={onToggleWishlist}
                                 animationDelay={`delay-${(index + 1) * 100}`}
                             />
                         ))}

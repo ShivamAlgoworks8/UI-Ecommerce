@@ -1,0 +1,150 @@
+.admin-header {
+  height: 72px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-bottom: 1px solid #eaeaea;
+  position: relative;
+}
+
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.admin-header-left h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.admin-header-left .admin-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  border-right: none;
+}
+
+.admin-header-left .admin-nav-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.admin-header-right {
+  position: relative;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  color: #222222;
+}
+
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f1f1;
+  color: #222222;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid #dddddd;
+}
+
+.profile-avatar.large {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.profile-chevron {
+  transition: transform 0.2s ease;
+}
+
+.profile-chevron.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 56px;
+  right: 0;
+  width: 220px;
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+}
+
+.profile-info strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-info span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: #777777;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #eeeeee;
+  margin: 10px 0;
+}
+
+.dropdown-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #222222;
+}
+
+.dropdown-item:hover {
+  background: #f7f7f7;
+}
+
+.dropdown-item.logout {
+  color: #c0392b;
+}
+
+.profile-button:hover .profile-avatar {
+  background: #e9e9e9;
+}
+
+.profile-button:focus-visible {
+  outline: 2px solid #222222;
+  outline-offset: 3px;
+}

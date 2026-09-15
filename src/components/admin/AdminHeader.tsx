@@ -2,14 +2,23 @@ import { useState } from "react";
 import "./AdminHeader.css";
 import AdminNavigation from "./AdminNavigation";
 
-function AdminHeader() {
+type AdminHeaderProps = {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+};
+
+function AdminHeader({ currentPage, onNavigate }: AdminHeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
     <header className="admin-header">
       <div className="admin-header-left">
         <h1>Nexora</h1>
-        <AdminNavigation />
+
+        <AdminNavigation
+          currentPage={currentPage}
+          onNavigate={onNavigate}
+        />
       </div>
 
       <div className="admin-header-right">

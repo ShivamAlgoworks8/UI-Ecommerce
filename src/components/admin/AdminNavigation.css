@@ -9,12 +9,17 @@
 .admin-nav-item {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 10px 12px;
+  border: none;
   border-radius: 8px;
+  background: transparent;
   color: #333333;
-  text-decoration: none;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -25,4 +30,9 @@
 .admin-nav-item.active {
   background: #222222;
   color: #ffffff;
+}
+
+.admin-nav-item:focus-visible {
+  outline: 2px solid #222222;
+  outline-offset: 2px;
 }

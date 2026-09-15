@@ -1,31 +1,61 @@
 import "./AdminNavigation.css";
 
-function AdminNavigation() {
+type AdminNavigationProps = {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+};
+
+function AdminNavigation({
+  currentPage,
+  onNavigate,
+}: AdminNavigationProps) {
   return (
     <nav className="admin-navigation">
-      <a href="#" className="admin-nav-item active">
+      <button
+        className={`admin-nav-item ${
+          currentPage === "dashboard" ? "active" : ""
+        }`}
+        onClick={() => onNavigate("dashboard")}
+      >
         Dashboard
-      </a>
+      </button>
 
-      <a href="#" className="admin-nav-item">
+      <button
+        className={`admin-nav-item ${
+          currentPage === "orders" ? "active" : ""
+        }`}
+        onClick={() => onNavigate("orders")}
+      >
         Orders
-      </a>
+      </button>
 
-      <a href="#" className="admin-nav-item">
+      <button
+        className="admin-nav-item"
+        onClick={() => onNavigate("payments")}
+      >
         Payments
-      </a>
+      </button>
 
-      <a href="#" className="admin-nav-item">
+      <button
+        className="admin-nav-item"
+        onClick={() => onNavigate("notifications")}
+      >
         Notifications
-      </a>
+      </button>
 
-      <a href="#" className="admin-nav-item">
+      <button
+        className="admin-nav-item"
+        onClick={() => onNavigate("products")}
+      >
         Products
-      </a>
+      </button>
 
-      <a href="#" className="admin-nav-item">
+      <button
+        className="admin-nav-item"
+        onClick={() => onNavigate("merchant")}
+      >
         Merchant
-      </a>
+      </button>
     </nav>
   );
 }

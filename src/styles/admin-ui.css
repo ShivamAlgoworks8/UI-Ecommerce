@@ -1,0 +1,288 @@
+:root {
+  --admin-page-max-width: 1440px;
+  --admin-border-soft: #ecece8;
+  --admin-surface-muted: #f4f6f4;
+  --admin-danger: #b42318;
+  --admin-danger-soft: #fff3f1;
+}
+
+.admin-page,
+.admin-dashboard {
+  width: 100%;
+  min-height: calc(100vh - 72px);
+  padding: 44px 48px 56px;
+  background: var(--surface-subtle);
+}
+
+.admin-page > *,
+.admin-dashboard > * {
+  width: min(100%, var(--admin-page-max-width));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.admin-page-header {
+  align-items: flex-end;
+  margin-bottom: 36px;
+}
+
+.admin-page-eyebrow,
+.dashboard-eyebrow {
+  margin-bottom: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.admin-page-header h2,
+.dashboard-header h2 {
+  color: var(--text-primary);
+  font-size: clamp(30px, 3vw, 38px);
+  letter-spacing: -0.02em;
+}
+
+.admin-page-description,
+.dashboard-description {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.admin-page-card,
+.dashboard-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.admin-page-card-header {
+  padding: 22px 24px;
+  border-bottom-color: var(--admin-border-soft);
+}
+
+.admin-page-card-header h3 {
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.admin-page-card-header p {
+  color: var(--text-muted);
+}
+
+.empty-state {
+  min-height: 260px;
+  gap: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfcfb 100%);
+}
+
+.empty-state strong {
+  color: var(--text-primary);
+}
+
+.empty-state span {
+  color: var(--text-muted);
+}
+
+.admin-page .admin-primary-button,
+.admin-dashboard .admin-primary-button {
+  flex-shrink: 0;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.admin-page .admin-primary-button:hover,
+.admin-dashboard .admin-primary-button:hover {
+  background: #125748;
+  box-shadow: 0 6px 14px rgba(23, 107, 91, 0.18);
+}
+
+.merchant-filters,
+.product-filters {
+  padding: 18px 24px;
+  background: #fcfcfb;
+  border-bottom-color: var(--admin-border-soft);
+}
+
+.merchant-search input,
+.merchant-status-filter select,
+.product-search input,
+.product-status-filter select,
+.merchant-form-field input,
+.merchant-form-field select,
+.product-form-field input,
+.product-form-field select,
+.product-form-field textarea {
+  border-color: #d7dcd8;
+  border-radius: 7px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.merchant-search input:focus,
+.merchant-status-filter select:focus,
+.product-search input:focus,
+.product-status-filter select:focus,
+.merchant-form-field input:focus,
+.merchant-form-field select:focus,
+.product-form-field input:focus,
+.product-form-field select:focus,
+.product-form-field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.merchant-table th,
+.product-table th {
+  background: var(--admin-surface-muted);
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.merchant-table th,
+.merchant-table td,
+.product-table th,
+.product-table td {
+  border-bottom-color: var(--admin-border-soft);
+}
+
+.merchant-table td,
+.product-table td {
+  color: var(--text-secondary);
+}
+
+.merchant-table tbody tr,
+.product-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.merchant-table tbody tr:hover,
+.product-table tbody tr:hover {
+  background: #f7faf8;
+}
+
+.merchant-status.available,
+.product-status.available {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.merchant-status.not-available,
+.product-status.not-available {
+  background: #f0f1ef;
+  color: var(--text-muted);
+}
+
+.merchant-edit-button,
+.product-edit-button,
+.merchant-delete-button,
+.product-delete-button,
+.merchant-cancel-button,
+.product-cancel-button,
+.pagination-button,
+.pagination-page {
+  border-radius: 7px;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.merchant-edit-button:hover,
+.product-edit-button:hover,
+.pagination-button:hover:not(:disabled),
+.pagination-page:hover {
+  border-color: #b8c9c1;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.merchant-delete-button,
+.product-delete-button {
+  color: var(--admin-danger);
+}
+
+.merchant-delete-button:hover,
+.product-delete-button:hover {
+  border-color: #efc5bf;
+  background: var(--admin-danger-soft);
+}
+
+.pagination-page.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 4px 10px rgba(23, 107, 91, 0.16);
+}
+
+.merchant-pagination,
+.product-pagination {
+  padding: 14px 24px;
+  background: #fcfcfb;
+  border-top-color: var(--admin-border-soft);
+}
+
+.merchant-modal-overlay,
+.product-modal-overlay {
+  background: rgba(23, 31, 28, 0.52);
+  backdrop-filter: blur(2px);
+}
+
+.merchant-modal,
+.product-modal {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(23, 31, 28, 0.2);
+}
+
+.merchant-modal-header,
+.product-modal-header {
+  padding: 20px 24px;
+  border-bottom-color: var(--admin-border-soft);
+}
+
+.merchant-modal-close,
+.product-modal-close {
+  color: var(--text-muted);
+}
+
+.merchant-modal-close:hover,
+.product-modal-close:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.merchant-cancel-button,
+.product-cancel-button {
+  border-color: #d7dcd8;
+  color: var(--text-secondary);
+}
+
+.merchant-cancel-button:hover,
+.product-cancel-button:hover {
+  border-color: #b8c9c1;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  .admin-page,
+  .admin-dashboard {
+    padding: 32px 24px 44px;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-page,
+  .admin-dashboard {
+    padding: 24px 16px 36px;
+  }
+
+  .admin-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-page-header .admin-primary-button {
+    align-self: flex-start;
+  }
+}

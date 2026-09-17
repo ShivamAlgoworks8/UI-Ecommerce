@@ -6,6 +6,7 @@ import Payments from "./features/payment/Payments";
 import Notifications from "./features/notification/Notifications";
 import Products from "./features/product/Products";
 import Merchant from "./features/merchant/Merchant";
+import "./styles/admin-ui.css";
 
 export type MerchantData = {
   id: number;

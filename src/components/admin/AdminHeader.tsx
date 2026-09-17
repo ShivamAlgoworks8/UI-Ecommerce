@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./AdminHeader.css";
 import AdminNavigation from "./AdminNavigation";
 
@@ -9,6 +9,24 @@ type AdminHeaderProps = {
 
 function AdminHeader({ currentPage, onNavigate }: AdminHeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="admin-header">
@@ -21,7 +39,7 @@ function AdminHeader({ currentPage, onNavigate }: AdminHeaderProps) {
         />
       </div>
 
-      <div className="admin-header-right">
+      <div className="admin-header-right" ref={profileRef}>
         <button
           className="profile-button"
           onClick={() => setIsProfileOpen(!isProfileOpen)}

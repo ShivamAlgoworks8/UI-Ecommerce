@@ -1,14 +1,25 @@
 import { useState } from "react";
 import AdminHeader from "./components/admin/AdminHeader";
 import Dashboard from "./pages/admin/Dashboard";
-import Orders from "./pages/admin/Orders";
-import Payments from "./pages/admin/Payments";
-import Notifications from "./pages/admin/Notifications";
-import Products from "./pages/admin/Products";
-import Merchant from "./pages/admin/Merchant";
+import Orders from "./features/order/Orders";
+import Payments from "./features/payment/Payments";
+import Notifications from "./features/notification/Notifications";
+import Products from "./features/product/Products";
+import Merchant from "./features/merchant/Merchant";
+
+export type MerchantData = {
+  id: number;
+  merchantName: string;
+  brandName: string;
+  productType: string;
+  status: string;
+  image: string;
+};
 
 function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
+
+  const [merchants, setMerchants] = useState<MerchantData[]>([]);
 
   return (
     <>
@@ -18,11 +29,23 @@ function App() {
       />
 
       {currentPage === "dashboard" && <Dashboard />}
+
       {currentPage === "orders" && <Orders />}
+
       {currentPage === "payments" && <Payments />}
+
       {currentPage === "notifications" && <Notifications />}
-      {currentPage === "products" && <Products />}
-      {currentPage === "merchant" && <Merchant />}
+
+      {currentPage === "products" && (
+        <Products merchants={merchants} />
+      )}
+
+      {currentPage === "merchant" && (
+        <Merchant
+          merchants={merchants}
+          setMerchants={setMerchants}
+        />
+      )}
     </>
   );
 }

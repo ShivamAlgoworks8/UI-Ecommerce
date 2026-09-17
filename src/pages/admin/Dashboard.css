@@ -1,7 +1,7 @@
 .admin-dashboard {
   min-height: calc(100vh - 86px);
   padding: 40px 48px;
-  background: #fafafa;
+  background: var(--surface-subtle);
   box-sizing: border-box;
 }
 
@@ -11,7 +11,7 @@
 
 .dashboard-eyebrow {
   margin: 0 0 8px;
-  color: #777777;
+  color: var(--accent);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -20,7 +20,7 @@
 
 .dashboard-header h2 {
   margin: 0 0 10px;
-  color: #171717;
+  color: var(--text-primary);
   font-size: 32px;
   font-weight: 600;
   line-height: 1.2;
@@ -28,7 +28,7 @@
 
 .dashboard-description {
   margin: 0;
-  color: #6b6b6b;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.5;
 }
@@ -41,22 +41,28 @@
 
 .dashboard-card {
   padding: 24px;
-  background: #ffffff;
-  border: 1px solid #e7e7e7;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(23, 23, 23, 0.08);
 }
 
 .dashboard-card span {
   display: block;
   margin-bottom: 14px;
-  color: #6b6b6b;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .dashboard-card strong {
   display: block;
-  color: #171717;
+  color: var(--text-primary);
   font-size: 30px;
   font-weight: 600;
   line-height: 1;

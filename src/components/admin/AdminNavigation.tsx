@@ -30,28 +30,36 @@ function AdminNavigation({
       </button>
 
       <button
-        className="admin-nav-item"
+        className={`admin-nav-item ${
+          currentPage === "payments" ? "active" : ""
+        }`}
         onClick={() => onNavigate("payments")}
       >
         Payments
       </button>
 
       <button
-        className="admin-nav-item"
+        className={`admin-nav-item ${
+          currentPage === "notifications" ? "active" : ""
+        }`}
         onClick={() => onNavigate("notifications")}
       >
         Notifications
       </button>
 
       <button
-        className="admin-nav-item"
+        className={`admin-nav-item ${
+          currentPage === "products" ? "active" : ""
+        }`}
         onClick={() => onNavigate("products")}
       >
         Products
       </button>
 
       <button
-        className="admin-nav-item"
+        className={`admin-nav-item ${
+          currentPage === "merchant" ? "active" : ""
+        }`}
         onClick={() => onNavigate("merchant")}
       >
         Merchant

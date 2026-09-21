@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminHeader from "./components/admin/AdminHeader";
 import Dashboard from "./pages/admin/Dashboard";
 import Orders from "./features/order/Orders";
@@ -20,7 +20,26 @@ export type MerchantData = {
 function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
 
-  const [merchants, setMerchants] = useState<MerchantData[]>([]);
+  const [merchants, setMerchants] = useState<MerchantData[]>(() => {
+    const savedMerchants = localStorage.getItem("nexora_merchants");
+
+    if (!savedMerchants) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(savedMerchants);
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(
+      "nexora_merchants",
+      JSON.stringify(merchants)
+    );
+  }, [merchants]);
 
   return (
     <>

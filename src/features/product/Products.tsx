@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Products.css";
 import type { MerchantData } from "../../App";
+import Pagination from "../../components/commonfeature/pagination";
+
 type ProductData = {
   id: number;
   merchant: string;
@@ -35,7 +37,26 @@ function Products({ merchants }: ProductProps) {
   const [image, setImage] = useState("");
 
   // Product listing
-  const [products, setProducts] = useState<ProductData[]>([]);
+  const [products, setProducts] = useState<ProductData[]>(() => {
+    const savedProducts = localStorage.getItem("nexora_products");
+
+    if (!savedProducts) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(savedProducts);
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(
+      "nexora_products",
+      JSON.stringify(products)
+    );
+  }, [products]);
 
   // Search and filter
   const [searchTerm, setSearchTerm] = useState("");
@@ -262,137 +283,96 @@ function Products({ merchants }: ProductProps) {
                 </span>
               </div>
             ) : (
-              <>
-                <div className="product-table-wrapper">
-                  <table className="product-table">
-                    <thead>
-                      <tr>
-                        <th>Merchant</th>
-                        <th>Product Name</th>
-                        <th>Price</th>
-                        <th>Stock</th>
-                        <th>Product Type</th>
-                        <th>Status</th>
-                        <th>Image</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
+              <div className="product-table-wrapper">
+                <table className="product-table">
+                  <thead>
+                    <tr>
+                      <th>Merchant</th>
+                      <th>Product Name</th>
+                      <th>Price</th>
+                      <th>Stock</th>
+                      <th>Product Type</th>
+                      <th>Status</th>
+                      <th>Image</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
 
-                    <tbody>
-                      {currentProducts.map((product) => (
-                        <tr key={product.id}>
-                          <td>{product.merchant}</td>
+                  <tbody>
+                    {currentProducts.map((product) => (
+                      <tr key={product.id}>
+                        <td>{product.merchant}</td>
 
-                          <td>{product.productName}</td>
+                        <td>{product.productName}</td>
 
-                          <td>₹{product.price}</td>
+                        <td>₹{product.price}</td>
 
-                          <td>{product.stock}</td>
+                        <td>{product.stock}</td>
 
-                          <td>{product.productType}</td>
+                        <td>{product.productType}</td>
 
-                          <td>
-                            <span
-                              className={`product-status ${
-                                product.status === "Available"
-                                  ? "available"
-                                  : "not-available"
-                              }`}
-                            >
-                              {product.status}
+                        <td>
+                          <span
+                            className={`product-status ${
+                              product.status === "Available"
+                                ? "available"
+                                : "not-available"
+                            }`}
+                          >
+                            {product.status}
+                          </span>
+                        </td>
+
+                        <td>
+                          {product.image ? (
+                            <span className="product-image-name">
+                              {product.image}
                             </span>
-                          </td>
+                          ) : (
+                            <span className="no-image">
+                              No image
+                            </span>
+                          )}
+                        </td>
 
-                          <td>
-                            {product.image ? (
-                              <span className="product-image-name">
-                                {product.image}
-                              </span>
-                            ) : (
-                              <span className="no-image">
-                                No image
-                              </span>
-                            )}
-                          </td>
+                        <td>
+                          <div className="product-action-buttons">
+                            <button
+                              className="product-edit-button"
+                              onClick={() =>
+                                openEditModal(product)
+                              }
+                            >
+                              Edit
+                            </button>
 
-                          <td>
-                            <div className="product-action-buttons">
-                              <button
-                                className="product-edit-button"
-                                onClick={() =>
-                                  openEditModal(product)
-                                }
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                className="product-delete-button"
-                                onClick={() =>
-                                  handleDeleteProduct(product.id)
-                                }
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="product-pagination">
-                    <button
-                      className="pagination-button"
-                      onClick={() =>
-                        setCurrentPage(
-                          (previousPage) => previousPage - 1
-                        )
-                      }
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </button>
-
-                    <div className="pagination-pages">
-                      {Array.from(
-                        { length: totalPages },
-                        (_, index) => index + 1
-                      ).map((page) => (
-                        <button
-                          key={page}
-                          className={`pagination-page ${
-                            currentPage === page
-                              ? "active"
-                              : ""
-                          }`}
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      className="pagination-button"
-                      onClick={() =>
-                        setCurrentPage(
-                          (previousPage) => previousPage + 1
-                        )
-                      }
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </>
+                            <button
+                              className="product-delete-button"
+                              onClick={() =>
+                                handleDeleteProduct(product.id)
+                              }
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </>
         )}
       </section>
+
+      {filteredProducts.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       {isModalOpen && (
         <div className="product-modal-overlay">

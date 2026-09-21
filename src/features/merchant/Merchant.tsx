@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { MerchantData } from "../../App";
+import Pagination from "../../components/commonfeature/pagination";
 import "./Merchant.css";
 
 type MerchantProps = {
@@ -234,138 +235,99 @@ function Merchant({
                 </span>
               </div>
             ) : (
-              <>
-                <div className="merchant-table-wrapper">
-                  <table className="merchant-table">
-                    <thead>
-                      <tr>
-                        <th>Merchant Name</th>
-                        <th>Brand Name</th>
-                        <th>Product Type</th>
-                        <th>Status</th>
-                        <th>Image</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
+              <div className="merchant-table-wrapper">
+                <table className="merchant-table">
+                  <thead>
+                    <tr>
+                      <th>Merchant Name</th>
+                      <th>Brand Name</th>
+                      <th>Product Type</th>
+                      <th>Status</th>
+                      <th>Image</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
 
-                    <tbody>
-                      {currentMerchants.map((merchant) => (
-                        <tr key={merchant.id}>
-                          <td>{merchant.merchantName}</td>
+                  <tbody>
+                    {currentMerchants.map((merchant) => (
+                      <tr key={merchant.id}>
+                        <td>{merchant.merchantName}</td>
 
-                          <td>{merchant.brandName}</td>
+                        <td>{merchant.brandName}</td>
 
-                          <td>{merchant.productType}</td>
+                        <td>{merchant.productType}</td>
 
-                          <td>
-                            <span
-                              className={`merchant-status ${
-                                merchant.status === "Available"
-                                  ? "available"
-                                  : "not-available"
-                              }`}
-                            >
-                              {merchant.status}
+                        <td>
+                          <span
+                            className={`merchant-status ${
+                              merchant.status === "Available"
+                                ? "available"
+                                : "not-available"
+                            }`}
+                          >
+                            {merchant.status}
+                          </span>
+                        </td>
+
+                        <td>
+                          {merchant.image ? (
+                            <span className="merchant-image-name">
+                              {merchant.image}
                             </span>
-                          </td>
+                          ) : (
+                            <span className="no-image">
+                              No image
+                            </span>
+                          )}
+                        </td>
 
-                          <td>
-                            {merchant.image ? (
-                              <span className="merchant-image-name">
-                                {merchant.image}
-                              </span>
-                            ) : (
-                              <span className="no-image">
-                                No image
-                              </span>
-                            )}
-                          </td>
+                        <td>
+                          <div className="merchant-action-buttons">
+                            <button
+                              className="merchant-edit-button"
+                              onClick={() =>
+                                openEditModal(merchant)
+                              }
+                            >
+                              Edit
+                            </button>
 
-                          <td>
-                            <div className="merchant-action-buttons">
-                              <button
-                                className="merchant-edit-button"
-                                onClick={() =>
-                                  openEditModal(merchant)
-                                }
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                className="merchant-delete-button"
-                                onClick={() =>
-                                  handleDeleteMerchant(merchant.id)
-                                }
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="merchant-pagination">
-                    <button
-                      className="pagination-button"
-                      onClick={() =>
-                        setCurrentPage(
-                          (previousPage) => previousPage - 1
-                        )
-                      }
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </button>
-
-                    <div className="pagination-pages">
-                      {Array.from(
-                        { length: totalPages },
-                        (_, index) => index + 1
-                      ).map((page) => (
-                        <button
-                          key={page}
-                          className={`pagination-page ${
-                            currentPage === page
-                              ? "active"
-                              : ""
-                          }`}
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      className="pagination-button"
-                      onClick={() =>
-                        setCurrentPage(
-                          (previousPage) => previousPage + 1
-                        )
-                      }
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </>
+                            <button
+                              className="merchant-delete-button"
+                              onClick={() =>
+                                handleDeleteMerchant(merchant.id)
+                              }
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </>
         )}
       </section>
+
+      {filteredMerchants.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       {isModalOpen && (
         <div className="merchant-modal-overlay">
           <div className="merchant-modal">
             <div className="merchant-modal-header">
               <h3>
-                {isEditMode ? "Edit Merchant" : "Add Merchant"}
+                {isEditMode
+                  ? "Edit Merchant"
+                  : "Add Merchant"}
               </h3>
 
               <button

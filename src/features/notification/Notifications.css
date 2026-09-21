@@ -1,100 +1,199 @@
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 40px 48px;
-  background: #fafafa;
-  box-sizing: border-box;
+/* Notifications Table */
+
+.notifications-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
 }
 
-.admin-page-header {
-  margin-bottom: 32px;
+.notifications-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
 }
 
-.admin-page-eyebrow {
-  margin: 0 0 8px;
-  color: #777777;
+.notifications-table th {
+  padding: 14px 16px;
+  background: #f7f8f7;
+  border-bottom: 1px solid #dfe3e1;
+  color: #626965;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.notifications-table td {
+  padding: 15px 16px;
+  border-bottom: 1px solid #ecefed;
+  color: #343937;
   font-size: 14px;
+  vertical-align: middle;
+}
+
+.notifications-table tbody tr:hover {
+  background: #fafbfa;
+}
+
+.notifications-table td strong {
+  color: #252a28;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
-.admin-page-header h2 {
-  margin: 0 0 10px;
-  color: #171717;
-  font-size: 32px;
+
+/* Notification Type */
+
+.notification-type,
+.notification-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.admin-page-description {
-  margin: 0;
-  color: #6b6b6b;
-  font-size: 16px;
-  line-height: 1.5;
+
+/* Types */
+
+.type-info {
+  background: #edf2ff;
+  color: #4d5fa3;
 }
 
-.admin-page-card {
+.type-success {
+  background: #eaf6ee;
+  color: #287342;
+}
+
+.type-warning {
+  background: #fff5df;
+  color: #986b14;
+}
+
+.type-alert {
+  background: #fdecec;
+  color: #a33a3a;
+}
+
+
+/* Status */
+
+.status-active {
+  background: #eaf6ee;
+  color: #287342;
+}
+
+.status-inactive {
+  background: #f1f2f2;
+  color: #6b716e;
+}
+
+
+/* Actions */
+
+.notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notification-actions button {
+  padding: 6px 9px;
+  border: 1px solid #d9dedc;
+  border-radius: 6px;
   background: #ffffff;
-  border: 1px solid #e7e7e7;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
+  color: #454b48;
+  font-size: 12px;
+  cursor: pointer;
 }
 
-.admin-page-card-header {
-  padding: 24px;
-  border-bottom: 1px solid #eeeeee;
+.notification-actions button:hover {
+  background: #f5f7f6;
 }
 
-.admin-page-card-header h3 {
-  margin: 0 0 6px;
-  color: #171717;
-  font-size: 18px;
-  font-weight: 600;
+.notification-actions .delete-action {
+  color: #a33a3a;
 }
 
-.admin-page-card-header p {
-  margin: 0;
-  color: #777777;
-  font-size: 14px;
+.notification-actions .delete-action:hover {
+  background: #fff4f4;
+  border-color: #e8caca;
 }
 
-.empty-state {
-  min-height: 220px;
-  padding: 32px;
+
+/* Add / Edit Notification Form */
+
+.notification-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.notification-form-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  gap: 7px;
 }
 
-.empty-state strong {
-  margin-bottom: 8px;
-  color: #171717;
-  font-size: 16px;
+.notification-form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.notification-form-group label {
+  font-size: 13px;
   font-weight: 600;
+  color: #343937;
 }
 
-.empty-state span {
-  max-width: 420px;
-  color: #777777;
+.notification-form-group input,
+.notification-form-group select,
+.notification-form-group textarea {
+  width: 100%;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid #d9dedc;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #343937;
   font-size: 14px;
-  line-height: 1.5;
+  outline: none;
 }
+
+.notification-form-group input,
+.notification-form-group select {
+  height: 42px;
+}
+
+.notification-form-group textarea {
+  padding-top: 11px;
+  padding-bottom: 11px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.notification-form-group input:focus,
+.notification-form-group select:focus,
+.notification-form-group textarea:focus {
+  border-color: #8c9691;
+}
+
+
+/* Responsive */
 
 @media (max-width: 900px) {
-  .admin-page {
-    padding: 32px 24px;
+  .notifications-table-wrapper {
+    overflow-x: auto;
   }
 }
 
 @media (max-width: 600px) {
-  .admin-page {
-    padding: 24px 16px;
+  .notification-form-grid {
+    grid-template-columns: 1fr;
   }
 
-  .admin-page-header h2 {
-    font-size: 28px;
+  .notification-form-group.full-width {
+    grid-column: auto;
   }
 }

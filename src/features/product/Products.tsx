@@ -4,7 +4,7 @@ import type { MerchantData } from "../../App";
 import Pagination from "../../components/commonfeature/pagination";
 
 type ProductData = {
-  id: number;
+  id: string;
   merchant: string;
   productName: string;
   price: number;
@@ -22,9 +22,7 @@ type ProductProps = {
 function Products({ merchants }: ProductProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingProductId, setEditingProductId] = useState<number | null>(
-    null
-  );
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   // Product form fields
   const [merchant, setMerchant] = useState("");
@@ -37,26 +35,46 @@ function Products({ merchants }: ProductProps) {
   const [image, setImage] = useState("");
 
   // Product listing
-  const [products, setProducts] = useState<ProductData[]>(() => {
-    const savedProducts = localStorage.getItem("nexora_products");
+  const [products, setProducts] = useState<ProductData[]>([]);
 
-    if (!savedProducts) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(savedProducts);
-    } catch {
-      return [];
-    }
-  });
-
+  // Get products from Java backend
   useEffect(() => {
-    localStorage.setItem(
-      "nexora_products",
-      JSON.stringify(products)
-    );
-  }, [products]);
+    fetch("http://localhost:8080/api/products")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        const backendProducts: ProductData[] = data.map(
+          (product: {
+            id: string;
+            name: string;
+            price: number;
+            stock: number;
+            description: string;
+            productType: string;
+          }) => ({
+            id: product.id,
+            merchant: "",
+            productName: product.name,
+            price: product.price,
+            stock: product.stock,
+            description: product.description,
+            productType: product.productType,
+            status: "Available",
+            image: "",
+          })
+        );
+
+        setProducts(backendProducts);
+      })
+      .catch((error) => {
+        console.error("Error fetching products:", error);
+      });
+  }, []);
 
   // Search and filter
   const [searchTerm, setSearchTerm] = useState("");
@@ -104,47 +122,74 @@ function Products({ merchants }: ProductProps) {
     setEditingProductId(null);
   };
 
-  const handleSubmitProduct = (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
+  const handleSubmitProduct = async (
+  event: React.FormEvent<HTMLFormElement>
+) => {
+  event.preventDefault();
 
-    if (isEditMode && editingProductId !== null) {
-      setProducts((previousProducts) =>
-        previousProducts.map((product) =>
-          product.id === editingProductId
-            ? {
-                ...product,
-                merchant,
-                productName,
-                price: Number(price),
-                stock: Number(stock),
-                description,
-                productType,
-                status,
-                image,
-              }
-            : product
-        )
-      );
-    } else {
-      const newProduct: ProductData = {
-        id: Date.now(),
-        merchant,
-        productName,
-        price: Number(price),
-        stock: Number(stock),
-        description,
-        productType,
-        status,
-        image,
-      };
+  if (isEditMode && editingProductId !== null) {
+    setProducts((previousProducts) =>
+      previousProducts.map((product) =>
+        product.id === editingProductId
+          ? {
+              ...product,
+              merchant,
+              productName,
+              price: Number(price),
+              stock: Number(stock),
+              description,
+              productType,
+              status,
+              image,
+            }
+          : product
+      )
+    );
 
-      setProducts((previousProducts) => [
-        ...previousProducts,
-        newProduct,
-      ]);
+    closeModal();
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "http://localhost:8080/api/products",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: productName,
+          price: Number(price),
+          stock: Number(stock),
+          description: description,
+          productType: productType,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to create product");
     }
+
+    const savedProduct = await response.json();
+
+    const newProduct: ProductData = {
+      id: savedProduct.id,
+      merchant: merchant,
+      productName: savedProduct.name,
+      price: savedProduct.price,
+      stock: savedProduct.stock,
+      description: savedProduct.description,
+      productType: savedProduct.productType,
+      status: status,
+      image: image,
+    };
+
+    setProducts((previousProducts) => [
+      ...previousProducts,
+      newProduct,
+    ]);
 
     setMerchant("");
     setProductName("");
@@ -156,9 +201,12 @@ function Products({ merchants }: ProductProps) {
     setImage("");
 
     closeModal();
-  };
+  } catch (error) {
+    console.error("Error creating product:", error);
+  }
+};
 
-  const handleDeleteProduct = (productId: number) => {
+  const handleDeleteProduct = (productId: string) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this product?"
     );
@@ -301,7 +349,7 @@ function Products({ merchants }: ProductProps) {
                   <tbody>
                     {currentProducts.map((product) => (
                       <tr key={product.id}>
-                        <td>{product.merchant}</td>
+                        <td>{product.merchant || "-"}</td>
 
                         <td>{product.productName}</td>
 

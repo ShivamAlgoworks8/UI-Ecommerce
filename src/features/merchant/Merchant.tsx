@@ -1,61 +1,68 @@
-import { useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import { startTransition, useEffect, useState } from "react";
+import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { Plus } from "lucide-react";
 import type { MerchantData } from "../../App";
+import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
+import DataTable from "@/components/admin/DataTable";
+import FormDrawer from "@/components/admin/FormDrawer";
+import StatusPill from "@/components/admin/StatusPill";
+import Toast from "@/components/admin/Toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Pagination from "../../components/commonfeature/pagination";
-import "./Merchant.css";
 
 type MerchantProps = {
   merchants: MerchantData[];
   setMerchants: Dispatch<SetStateAction<MerchantData[]>>;
+  searchTerm: string;
+  createRequest: { page: string; id: number } | null;
+  onCreateRequestHandled: (id: number) => void;
 };
 
-function Merchant({
-  merchants,
-  setMerchants,
-}: MerchantProps) {
+function Merchant({ merchants, setMerchants, searchTerm, createRequest, onCreateRequestHandled }: MerchantProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingMerchantId, setEditingMerchantId] = useState<number | null>(
-    null
-  );
-
+  const [editingMerchantId, setEditingMerchantId] = useState<number | null>(null);
   const [merchantName, setMerchantName] = useState("");
   const [brandName, setBrandName] = useState("");
   const [productType, setProductType] = useState("");
   const [status, setStatus] = useState("Available");
   const [image, setImage] = useState("");
-
-  // Search and Filter
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const merchantsPerPage = 5;
 
   const openAddModal = () => {
     setIsEditMode(false);
     setEditingMerchantId(null);
-
     setMerchantName("");
     setBrandName("");
     setProductType("");
     setStatus("Available");
     setImage("");
-
     setIsModalOpen(true);
   };
+
+  useEffect(() => {
+    if (createRequest?.page !== "merchant") return;
+    startTransition(() => {
+      openAddModal();
+      onCreateRequestHandled(createRequest.id);
+    });
+  }, [createRequest, onCreateRequestHandled]);
 
   const openEditModal = (merchant: MerchantData) => {
     setIsEditMode(true);
     setEditingMerchantId(merchant.id);
-
     setMerchantName(merchant.merchantName);
     setBrandName(merchant.brandName);
     setProductType(merchant.productType);
     setStatus(merchant.status);
     setImage(merchant.image);
-
     setIsModalOpen(true);
   };
 
@@ -65,417 +72,139 @@ function Merchant({
     setEditingMerchantId(null);
   };
 
-  const handleSubmitMerchant = (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmitMerchant = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (isEditMode && editingMerchantId !== null) {
-      setMerchants((previousMerchants) =>
-        previousMerchants.map((merchant) =>
-          merchant.id === editingMerchantId
-            ? {
-                ...merchant,
-                merchantName,
-                brandName,
-                productType,
-                status,
-                image,
-              }
-            : merchant
-        )
-      );
-    } else {
-      const newMerchant: MerchantData = {
-        id: Date.now(),
-        merchantName,
-        brandName,
-        productType,
-        status,
-        image,
-      };
-
-      setMerchants((previousMerchants) => [
-        ...previousMerchants,
-        newMerchant,
-      ]);
+    if (!merchantName.trim() || !brandName.trim() || !productType) {
+      setToastMessage("Complete the required merchant fields before saving");
+      return;
     }
-
+    if (isEditMode && editingMerchantId !== null) {
+      setMerchants((previousMerchants) => previousMerchants.map((merchant) =>
+        merchant.id === editingMerchantId
+          ? { ...merchant, merchantName, brandName, productType, status, image }
+          : merchant,
+      ));
+    } else {
+      const newMerchant: MerchantData = { id: Date.now(), merchantName, brandName, productType, status, image };
+      setMerchants((previousMerchants) => [...previousMerchants, newMerchant]);
+    }
     setMerchantName("");
     setBrandName("");
     setProductType("");
     setStatus("Available");
     setImage("");
-
     closeModal();
+    setToastMessage(isEditMode ? "Merchant updated successfully" : "Merchant added successfully");
   };
 
   const handleDeleteMerchant = (merchantId: number) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this merchant?"
-    );
-
-    if (!confirmDelete) {
-      return;
-    }
-
-    setMerchants((previousMerchants) =>
-      previousMerchants.filter(
-        (merchant) => merchant.id !== merchantId
-      )
-    );
+    const confirmDelete = window.confirm("Are you sure you want to delete this merchant?");
+    if (!confirmDelete) return;
+    setMerchants((previousMerchants) => previousMerchants.filter((merchant) => merchant.id !== merchantId));
   };
 
-  // Search and Filter Logic
   const filteredMerchants = merchants.filter((merchant) => {
     const searchValue = searchTerm.toLowerCase();
-
-    const matchesSearch =
-      merchant.merchantName.toLowerCase().includes(searchValue) ||
-      merchant.brandName.toLowerCase().includes(searchValue) ||
-      merchant.productType.toLowerCase().includes(searchValue);
-
-    const matchesStatus =
-      statusFilter === "All" ||
-      merchant.status === statusFilter;
-
+    const matchesSearch = merchant.merchantName.toLowerCase().includes(searchValue)
+      || merchant.brandName.toLowerCase().includes(searchValue)
+      || merchant.productType.toLowerCase().includes(searchValue);
+    const matchesStatus = statusFilter === "All" || merchant.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Pagination Logic
-  const totalPages = Math.ceil(
-    filteredMerchants.length / merchantsPerPage
-  );
-
-  const startIndex =
-    (currentPage - 1) * merchantsPerPage;
-
-  const currentMerchants = filteredMerchants.slice(
-    startIndex,
-    startIndex + merchantsPerPage
-  );
+  const totalPages = Math.ceil(filteredMerchants.length / merchantsPerPage);
+  const visiblePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (visiblePage - 1) * merchantsPerPage;
+  const currentMerchants = filteredMerchants.slice(startIndex, startIndex + merchantsPerPage);
 
   return (
-    <main className="admin-page">
-      <div className="admin-page-header">
-        <div>
-          <p className="admin-page-eyebrow">Management</p>
-
-          <h2>Merchant</h2>
-
-          <p className="admin-page-description">
-            View and manage merchants connected to your store.
-          </p>
-        </div>
-
-        <button
-          className="admin-primary-button"
-          onClick={openAddModal}
-        >
-          Add Merchant
-        </button>
-      </div>
-
-      <section className="admin-page-card">
-        <div className="admin-page-card-header">
-          <div>
-            <h3>Merchants</h3>
-
-            <p>
-              Merchants connected to your platform will appear here.
-            </p>
-          </div>
-        </div>
-
+    <AdminPage>
+      <AdminPageHeader title="Merchant" description="View and manage merchants connected to your store." action={<Button onClick={openAddModal}><Plus />Add Merchant</Button>} />
+      <DataTable
+        title="Merchant list"
+        description="Merchants connected to your platform will appear here."
+        toolbar={
+          <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setCurrentPage(1); }}>
+            <SelectTrigger aria-label="Filter by status" className="sm:w-44"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="All">All status</SelectItem><SelectItem value="Available">Available</SelectItem><SelectItem value="NA">NA</SelectItem></SelectContent>
+          </Select>
+        }
+      >
         {merchants.length === 0 ? (
-          <div className="empty-state">
-            <strong>No merchants yet</strong>
-
-            <span>
-              Once merchants are added, you will be able to view and
-              manage them here.
-            </span>
-          </div>
+          <EmptyState
+            title="No merchants yet"
+            description="Once merchants are added, you will be able to view and manage them here."
+            action={<Button onClick={openAddModal}><Plus />Add Merchant</Button>}
+          />
         ) : (
-          <>
-            <div className="merchant-filters">
-              <div className="merchant-search">
-                <input
-                  type="text"
-                  placeholder="Search merchant..."
-                  value={searchTerm}
-                  onChange={(event) => {
-                    setSearchTerm(event.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-
-              <div className="merchant-status-filter">
-                <select
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="All">All Status</option>
-                  <option value="Available">Available</option>
-                  <option value="NA">NA</option>
-                </select>
-              </div>
-            </div>
-
-            {filteredMerchants.length === 0 ? (
-              <div className="empty-state">
-                <strong>No merchants found</strong>
-
-                <span>
-                  Try changing your search or filter.
-                </span>
-              </div>
-            ) : (
-              <div className="merchant-table-wrapper">
-                <table className="merchant-table">
-                  <thead>
-                    <tr>
-                      <th>Merchant Name</th>
-                      <th>Brand Name</th>
-                      <th>Product Type</th>
-                      <th>Status</th>
-                      <th>Image</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {currentMerchants.map((merchant) => (
-                      <tr key={merchant.id}>
-                        <td>{merchant.merchantName}</td>
-
-                        <td>{merchant.brandName}</td>
-
-                        <td>{merchant.productType}</td>
-
-                        <td>
-                          <span
-                            className={`merchant-status ${
-                              merchant.status === "Available"
-                                ? "available"
-                                : "not-available"
-                            }`}
-                          >
-                            {merchant.status}
-                          </span>
-                        </td>
-
-                        <td>
-                          {merchant.image ? (
-                            <span className="merchant-image-name">
-                              {merchant.image}
-                            </span>
-                          ) : (
-                            <span className="no-image">
-                              No image
-                            </span>
-                          )}
-                        </td>
-
-                        <td>
-                          <div className="merchant-action-buttons">
-                            <button
-                              className="merchant-edit-button"
-                              onClick={() =>
-                                openEditModal(merchant)
-                              }
-                            >
-                              Edit
-                            </button>
-
-                            <button
-                              className="merchant-delete-button"
-                              onClick={() =>
-                                handleDeleteMerchant(merchant.id)
-                              }
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+          filteredMerchants.length === 0 ? (
+            <EmptyState title="No merchants found" description="Try changing your search or filter." />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-background hover:bg-background">
+                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Merchant Name</TableHead>
+                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Brand Name</TableHead>
+                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Product Type</TableHead>
+                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Status</TableHead>
+                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Image</TableHead>
+                  <TableHead className="h-12 px-[18px] text-right text-sm font-medium normal-case tracking-normal">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentMerchants.map((merchant) => (
+                  <TableRow key={merchant.id} className="border-t border-border">
+                    <TableCell className="px-[18px] py-3 font-medium">{merchant.merchantName}</TableCell>
+                    <TableCell className="px-[18px] py-3">{merchant.brandName}</TableCell>
+                    <TableCell className="px-[18px] py-3">{merchant.productType}</TableCell>
+                    <TableCell className="px-[18px] py-3"><StatusPill status={merchant.status} /></TableCell>
+                    <TableCell className="max-w-40 truncate px-[18px] py-3 text-muted-foreground">{merchant.image || "No image"}</TableCell>
+                    <TableCell className="px-[18px] py-3">
+                      <div className="flex justify-end gap-4">
+                        <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => openEditModal(merchant)}>Edit</button>
+                        <button type="button" className="text-sm font-medium text-destructive hover:underline" onClick={() => handleDeleteMerchant(merchant.id)}>Delete</button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )
         )}
-      </section>
+      </DataTable>
 
-      {filteredMerchants.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
+      {filteredMerchants.length > 0 && <Pagination currentPage={visiblePage} totalPages={totalPages} onPageChange={setCurrentPage} />}
 
-      {isModalOpen && (
-        <div className="merchant-modal-overlay">
-          <div className="merchant-modal">
-            <div className="merchant-modal-header">
-              <h3>
-                {isEditMode
-                  ? "Edit Merchant"
-                  : "Add Merchant"}
-              </h3>
-
-              <button
-                className="merchant-modal-close"
-                onClick={closeModal}
-                aria-label="Close modal"
-              >
-                ×
-              </button>
+      <FormDrawer
+        open={isModalOpen}
+        onOpenChange={(open) => !open && closeModal()}
+        title={isEditMode ? "Edit Merchant" : "Add Merchant"}
+        description={isEditMode ? "Update the merchant details." : "Enter the details for the new merchant."}
+        formId="merchant-form"
+        submitLabel={isEditMode ? "Save changes" : "Save merchant"}
+      >
+          <form id="merchant-form" onSubmit={handleSubmitMerchant} className="space-y-5">
+            <div className="grid gap-2"><Label htmlFor="merchant-name">Merchant Name</Label><Input id="merchant-name" value={merchantName} onChange={(event) => setMerchantName(event.target.value)} placeholder="Enter merchant name" required /></div>
+            <div className="grid gap-2"><Label htmlFor="merchant-brand">Brand Name</Label><Input id="merchant-brand" value={brandName} onChange={(event) => setBrandName(event.target.value)} placeholder="Enter brand name" required /></div>
+            <div className="grid gap-2">
+              <Label htmlFor="merchant-product-type">Product Type</Label>
+              <Select value={productType || "none"} onValueChange={(value) => setProductType(value === "none" ? "" : value)} required>
+                <SelectTrigger id="merchant-product-type"><SelectValue placeholder="Select product type" /></SelectTrigger>
+                <SelectContent><SelectItem value="none" disabled>Select product type</SelectItem><SelectItem value="Electronics">Electronics</SelectItem><SelectItem value="Clothing">Clothing</SelectItem><SelectItem value="Grocery">Grocery</SelectItem><SelectItem value="Home & Living">Home &amp; Living</SelectItem></SelectContent>
+              </Select>
             </div>
-
-            <form
-              className="merchant-form"
-              onSubmit={handleSubmitMerchant}
-            >
-              <div className="merchant-form-field">
-                <label htmlFor="merchantName">
-                  Merchant Name
-                </label>
-
-                <input
-                  id="merchantName"
-                  type="text"
-                  value={merchantName}
-                  onChange={(event) =>
-                    setMerchantName(event.target.value)
-                  }
-                  placeholder="Enter merchant name"
-                  required
-                />
-              </div>
-
-              <div className="merchant-form-field">
-                <label htmlFor="brandName">
-                  Brand Name
-                </label>
-
-                <input
-                  id="brandName"
-                  type="text"
-                  value={brandName}
-                  onChange={(event) =>
-                    setBrandName(event.target.value)
-                  }
-                  placeholder="Enter brand name"
-                  required
-                />
-              </div>
-
-              <div className="merchant-form-field">
-                <label htmlFor="productType">
-                  Product Type
-                </label>
-
-                <select
-                  id="productType"
-                  value={productType}
-                  onChange={(event) =>
-                    setProductType(event.target.value)
-                  }
-                  required
-                >
-                  <option value="">
-                    Select product type
-                  </option>
-
-                  <option value="Electronics">
-                    Electronics
-                  </option>
-
-                  <option value="Clothing">
-                    Clothing
-                  </option>
-
-                  <option value="Grocery">
-                    Grocery
-                  </option>
-
-                  <option value="Home & Living">
-                    Home & Living
-                  </option>
-                </select>
-              </div>
-
-              <div className="merchant-form-field">
-                <label htmlFor="status">
-                  Status
-                </label>
-
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value)
-                  }
-                >
-                  <option value="Available">
-                    Available
-                  </option>
-
-                  <option value="NA">
-                    NA
-                  </option>
-                </select>
-              </div>
-
-              <div className="merchant-form-field">
-                <label htmlFor="merchantImage">
-                  Images
-                </label>
-
-                <input
-                  id="merchantImage"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-
-                    if (file) {
-                      setImage(file.name);
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="merchant-form-actions">
-                <button
-                  type="button"
-                  className="merchant-cancel-button"
-                  onClick={closeModal}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="admin-primary-button"
-                >
-                  {isEditMode
-                    ? "Update Merchant"
-                    : "Add Merchant"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </main>
+            <div className="grid gap-2">
+              <Label htmlFor="merchant-status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger id="merchant-status"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Available">Available</SelectItem><SelectItem value="NA">NA</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label htmlFor="merchant-image">Images</Label><Input id="merchant-image" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) setImage(file.name); }} /></div>
+          </form>
+      </FormDrawer>
+      <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+    </AdminPage>
   );
 }
 

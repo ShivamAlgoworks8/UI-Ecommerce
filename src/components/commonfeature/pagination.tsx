@@ -1,4 +1,5 @@
-import "./pagination.css";
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type PaginationProps = {
   currentPage: number;
@@ -46,50 +47,53 @@ function Pagination({
   };
 
   return (
-    <div className="common-pagination-wrapper">
-      <div className="common-pagination">
-        <button
-          className="common-pagination-nav"
+    <nav aria-label="Pagination" className="flex items-center justify-center gap-1 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
         >
-          <span>‹</span>
+          <ChevronLeft />
           Previous
-        </button>
+        </Button>
 
-        <div className="common-pagination-pages">
+        <div className="flex items-center gap-1">
           {getPages().map((page, index) =>
             page === "..." ? (
               <span
                 key={`ellipsis-${index}`}
-                className="common-pagination-ellipsis"
+                className="grid size-9 place-items-center text-muted-foreground"
               >
-                ...
+                <MoreHorizontal className="size-4" />
               </span>
             ) : (
-              <button
+              <Button
                 key={page}
-                className={`common-pagination-page ${
-                  currentPage === page ? "active" : ""
-                }`}
+                variant={currentPage === page ? "default" : "outline"}
+                size="icon"
+                aria-current={currentPage === page ? "page" : undefined}
+                aria-label={`Page ${page}`}
                 onClick={() => onPageChange(page as number)}
               >
                 {page}
-              </button>
+              </Button>
             )
           )}
         </div>
 
-        <button
-          className="common-pagination-nav"
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
           Next
-          <span>›</span>
-        </button>
-      </div>
-    </div>
+          <ChevronRight />
+        </Button>
+    </nav>
   );
 }
 

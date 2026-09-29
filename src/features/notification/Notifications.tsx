@@ -1,7 +1,19 @@
-import { useState } from "react";
-import "./Notifications.css";
+import { startTransition, useEffect, useState } from "react";
+import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { Plus } from "lucide-react";
+import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
+import DataTable from "@/components/admin/DataTable";
+import FormDrawer from "@/components/admin/FormDrawer";
+import StatusPill from "@/components/admin/StatusPill";
+import Toast from "@/components/admin/Toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
-type Notification = {
+export type Notification = {
   id: number;
   title: string;
   message: string;
@@ -10,20 +22,23 @@ type Notification = {
   date: string;
 };
 
-function Notifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+type NotificationsProps = {
+  notifications: Notification[];
+  setNotifications: Dispatch<SetStateAction<Notification[]>>;
+  searchTerm: string;
+  createRequest: { page: string; id: number } | null;
+  onCreateRequestHandled: (id: number) => void;
+};
 
+function Notifications({ notifications, setNotifications, searchTerm, createRequest, onCreateRequestHandled }: NotificationsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingNotification, setEditingNotification] =
-    useState<Notification | null>(null);
-
+  const [editingNotification, setEditingNotification] = useState<Notification | null>(null);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [type, setType] =
-    useState<Notification["type"]>("Info");
-  const [status, setStatus] =
-    useState<Notification["status"]>("Active");
+  const [type, setType] = useState<Notification["type"]>("Info");
+  const [status, setStatus] = useState<Notification["status"]>("Active");
   const [date, setDate] = useState("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const resetForm = () => {
     setTitle("");
@@ -39,15 +54,21 @@ function Notifications() {
     setIsModalOpen(true);
   };
 
+  useEffect(() => {
+    if (createRequest?.page !== "notifications") return;
+    startTransition(() => {
+      openAddModal();
+      onCreateRequestHandled(createRequest.id);
+    });
+  }, [createRequest, onCreateRequestHandled]);
+
   const openEditModal = (notification: Notification) => {
     setEditingNotification(notification);
-
     setTitle(notification.title);
     setMessage(notification.message);
     setType(notification.type);
     setStatus(notification.status);
     setDate(notification.date);
-
     setIsModalOpen(true);
   };
 
@@ -56,31 +77,21 @@ function Notifications() {
     resetForm();
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (
-      !title.trim() ||
-      !message.trim() ||
-      !date
-    ) {
+    if (!title.trim() || !message.trim() || !date) {
       return;
     }
 
+    const wasEditing = Boolean(editingNotification);
     if (editingNotification) {
       setNotifications((previousNotifications) =>
         previousNotifications.map((notification) =>
           notification.id === editingNotification.id
-            ? {
-                ...notification,
-                title: title.trim(),
-                message: message.trim(),
-                type,
-                status,
-                date,
-              }
-            : notification
-        )
+            ? { ...notification, title: title.trim(), message: message.trim(), type, status, date }
+            : notification,
+        ),
       );
     } else {
       const newNotification: Notification = {
@@ -92,268 +103,122 @@ function Notifications() {
         date,
       };
 
-      setNotifications((previousNotifications) => [
-        ...previousNotifications,
-        newNotification,
-      ]);
+      setNotifications((previousNotifications) => [...previousNotifications, newNotification]);
     }
 
     closeModal();
+    setToastMessage(wasEditing ? "Notification updated successfully" : "Notification added successfully");
   };
 
   const handleDelete = (id: number) => {
     setNotifications((previousNotifications) =>
-      previousNotifications.filter(
-        (notification) => notification.id !== id
-      )
+      previousNotifications.filter((notification) => notification.id !== id),
     );
   };
 
+  const filteredNotifications = notifications.filter((notification) => [
+    notification.title,
+    notification.message,
+    notification.type,
+    notification.status,
+    notification.date,
+  ].some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())));
+
   return (
-    <main className="admin-page">
-      <div className="admin-page-header">
-        <div>
-          <p className="admin-page-eyebrow">Management</p>
+    <AdminPage>
+      <AdminPageHeader
+        title="Notifications"
+        description="View and manage system notifications."
+        action={<Button onClick={openAddModal}><Plus />Add Notification</Button>}
+      />
 
-          <h2>Notifications</h2>
-
-          <p className="admin-page-description">
-            View and manage system notifications.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="admin-primary-button"
-          onClick={openAddModal}
-        >
-          + Add Notification
-        </button>
-      </div>
-
-      <section className="admin-page-card">
-        <div className="admin-page-card-header">
-          <div>
-            <h3>Notification List</h3>
-
-            <p>
-              Notifications will appear here.
-            </p>
-          </div>
-        </div>
-
-        {notifications.length === 0 ? (
-          <div className="empty-state">
-            <strong>No notifications yet</strong>
-
-            <span>
-              Add a notification to see it listed here.
-            </span>
-          </div>
+      <DataTable title="Notification list" description="Notifications will appear here.">
+        {filteredNotifications.length === 0 ? (
+          notifications.length === 0
+            ? <EmptyState title="No notifications yet" description="Add a notification to see it listed here." action={<Button onClick={openAddModal}><Plus />Add Notification</Button>} />
+            : <EmptyState title="No notifications found" description="Try a different search." />
         ) : (
-          <div className="notifications-table-wrapper">
-            <table className="notifications-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Message</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {notifications.map((notification) => (
-                  <tr key={notification.id}>
-                    <td>
-                      <strong>{notification.title}</strong>
-                    </td>
-
-                    <td>{notification.message}</td>
-
-                    <td>
-                      <span
-                        className={`notification-type type-${notification.type.toLowerCase()}`}
-                      >
-                        {notification.type}
-                      </span>
-                    </td>
-
-                    <td>
-                      <span
-                        className={`notification-status status-${notification.status.toLowerCase()}`}
-                      >
-                        {notification.status}
-                      </span>
-                    </td>
-
-                    <td>{notification.date}</td>
-
-                    <td>
-                      <div className="notification-actions">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openEditModal(notification)
-                          }
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          className="delete-action"
-                          onClick={() =>
-                            handleDelete(notification.id)
-                          }
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-background hover:bg-background">
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Title</TableHead>
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Message</TableHead>
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Type</TableHead>
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Status</TableHead>
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Date</TableHead>
+                <TableHead className="h-12 px-[18px] text-right text-sm font-medium normal-case tracking-normal">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredNotifications.map((notification) => (
+                <TableRow key={notification.id} className="border-t border-border">
+                  <TableCell className="px-[18px] py-3 font-medium">{notification.title}</TableCell>
+                  <TableCell className="max-w-xs truncate px-[18px] py-3">{notification.message}</TableCell>
+                  <TableCell className="px-[18px] py-3"><StatusPill status={notification.type} /></TableCell>
+                  <TableCell className="px-[18px] py-3"><StatusPill status={notification.status} /></TableCell>
+                  <TableCell className="whitespace-nowrap px-[18px] py-3">{notification.date}</TableCell>
+                  <TableCell className="px-[18px] py-3">
+                    <div className="flex justify-end gap-4">
+                      <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => openEditModal(notification)}>Edit</button>
+                      <button type="button" className="text-sm font-medium text-destructive hover:underline" onClick={() => handleDelete(notification.id)}>Delete</button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </section>
+      </DataTable>
 
-      {isModalOpen && (
-        <div
-          className="admin-modal-overlay"
-          onClick={closeModal}
-        >
-          <div
-            className="admin-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="admin-modal-header">
-              <div>
-                <h3>
-                  {editingNotification
-                    ? "Edit Notification"
-                    : "Add Notification"}
-                </h3>
-
-                <p>
-                  {editingNotification
-                    ? "Update notification details."
-                    : "Enter the notification details."}
-                </p>
+      <FormDrawer
+        open={isModalOpen}
+        onOpenChange={(open) => !open && closeModal()}
+        title={editingNotification ? "Edit Notification" : "Add Notification"}
+        description={editingNotification ? "Update notification details." : "Enter the notification details."}
+        formId="notification-form"
+        submitLabel={editingNotification ? "Save changes" : "Save notification"}
+      >
+          <form id="notification-form" onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="notification-title">Title</Label>
+                <Input id="notification-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Enter notification title" required />
               </div>
-
-              <button
-                type="button"
-                className="admin-modal-close"
-                onClick={closeModal}
-              >
-                ×
-              </button>
+              <div className="grid gap-2">
+                <Label htmlFor="notification-type">Type</Label>
+                <Select value={type} onValueChange={(value: Notification["type"]) => setType(value)}>
+                  <SelectTrigger id="notification-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Info">Info</SelectItem>
+                    <SelectItem value="Success">Success</SelectItem>
+                    <SelectItem value="Warning">Warning</SelectItem>
+                    <SelectItem value="Alert">Alert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="notification-message">Message</Label>
+                <Textarea id="notification-message" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Enter notification message" rows={4} required />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="notification-status">Status</Label>
+                <Select value={status} onValueChange={(value: Notification["status"]) => setStatus(value)}>
+                  <SelectTrigger id="notification-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="notification-date">Date</Label>
+                <Input id="notification-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+              </div>
             </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="admin-modal-body">
-                <div className="notification-form-grid">
-                  <div className="notification-form-group">
-                    <label>Title</label>
-
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(event) =>
-                        setTitle(event.target.value)
-                      }
-                      placeholder="Enter notification title"
-                    />
-                  </div>
-
-                  <div className="notification-form-group">
-                    <label>Type</label>
-
-                    <select
-                      value={type}
-                      onChange={(event) =>
-                        setType(
-                          event.target.value as Notification["type"]
-                        )
-                      }
-                    >
-                      <option value="Info">Info</option>
-                      <option value="Success">Success</option>
-                      <option value="Warning">Warning</option>
-                      <option value="Alert">Alert</option>
-                    </select>
-                  </div>
-
-                  <div className="notification-form-group full-width">
-                    <label>Message</label>
-
-                    <textarea
-                      value={message}
-                      onChange={(event) =>
-                        setMessage(event.target.value)
-                      }
-                      placeholder="Enter notification message"
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="notification-form-group">
-                    <label>Status</label>
-
-                    <select
-                      value={status}
-                      onChange={(event) =>
-                        setStatus(
-                          event.target.value as Notification["status"]
-                        )
-                      }
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-
-                  <div className="notification-form-group">
-                    <label>Date</label>
-
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(event) =>
-                        setDate(event.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="admin-modal-footer">
-                <button
-                  type="button"
-                  className="admin-secondary-button"
-                  onClick={closeModal}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="admin-primary-button"
-                >
-                  {editingNotification
-                    ? "Update Notification"
-                    : "Add Notification"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </main>
+          </form>
+      </FormDrawer>
+      <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+    </AdminPage>
   );
 }
 

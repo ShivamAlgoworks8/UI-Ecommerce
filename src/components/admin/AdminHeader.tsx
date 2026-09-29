@@ -1,89 +1,86 @@
-import { useEffect, useRef, useState } from "react";
-import "./AdminHeader.css";
-import AdminNavigation from "./AdminNavigation";
+import { useEffect, useRef } from "react";
+import { Bell, Search } from "lucide-react";
+import type { ThemeMode } from "../../App";
+import { Button } from "@/components/ui/button";
+import CreateMenu from "./CreateMenu";
+import UserMenu from "./UserMenu";
 
 type AdminHeaderProps = {
   currentPage: string;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
   onNavigate: (page: string) => void;
+  onCreate: (page: string) => void;
+  themeMode: ThemeMode;
+  onThemeChange: (theme: ThemeMode) => void;
 };
 
-function AdminHeader({ currentPage, onNavigate }: AdminHeaderProps) {
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
+const searchLabels: Record<string, string> = {
+  products: "products",
+  orders: "orders",
+  payments: "payments",
+  notifications: "notifications",
+  merchant: "merchants",
+  customers: "customers",
+  categories: "categories",
+};
+
+function AdminHeader({
+  currentPage,
+  searchTerm,
+  onSearchChange,
+  onNavigate,
+  onCreate,
+  themeMode,
+  onThemeChange,
+}: AdminHeaderProps) {
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target as Node)
-      ) {
-        setIsProfileOpen(false);
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        if (!searchRef.current) return;
+        event.preventDefault();
+        searchRef.current.focus();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
   }, []);
 
   return (
-    <header className="admin-header">
-      <div className="admin-header-left">
-        <h1>Nexora</h1>
-
-        <AdminNavigation
-          currentPage={currentPage}
-          onNavigate={onNavigate}
-        />
-      </div>
-
-      <div className="admin-header-right" ref={profileRef}>
-        <button
-          className="profile-button"
-          onClick={() => setIsProfileOpen(!isProfileOpen)}
-          aria-label="Open profile menu"
-          aria-expanded={isProfileOpen}
+    <header className="admin-topbar">
+      <button type="button" className="admin-header-brand" onClick={() => onNavigate("dashboard")}>
+        Nexora
+      </button>
+      {currentPage !== "dashboard" && (
+        <label className="admin-global-search">
+          <Search className="admin-global-search-icon" aria-hidden="true" />
+          <input
+            ref={searchRef}
+            type="search"
+            aria-label={`Search in ${searchLabels[currentPage] ?? "products"}`}
+            placeholder={`Search in ${searchLabels[currentPage] ?? "products"}...`}
+            value={searchTerm}
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
+          <kbd aria-hidden="true">{navigator.platform.includes("Mac") ? "⌘K" : "Ctrl+K"}</kbd>
+        </label>
+      )}
+      <div className="admin-header-actions">
+        <CreateMenu onCreate={onCreate} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="admin-notification-link"
+          aria-label="View notifications"
+          onClick={() => onNavigate("notifications")}
         >
-          <div className="profile-avatar">S</div>
-
-          <svg
-            className={`profile-chevron ${isProfileOpen ? "open" : ""}`}
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M6 9L12 15L18 9"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-
-        {isProfileOpen && (
-          <div className="profile-dropdown">
-            <div className="profile-info">
-              <div className="profile-avatar large">S</div>
-
-              <div>
-                <strong>Shivam</strong>
-                <span>Administrator</span>
-              </div>
-            </div>
-
-            <div className="dropdown-divider" />
-
-            <button className="dropdown-item">Profile</button>
-
-            <button className="dropdown-item logout">Logout</button>
-          </div>
-        )}
+          <Bell aria-hidden="true" />
+        </Button>
+        <UserMenu themeMode={themeMode} onThemeChange={onThemeChange} />
       </div>
     </header>
   );

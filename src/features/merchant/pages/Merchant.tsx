@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { Plus } from "lucide-react";
-import type { MerchantData } from "../../App";
+import type { MerchantData } from "@/features/merchant/types";
 import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
 import DataTable from "@/components/admin/DataTable";
 import FormDrawer from "@/components/admin/FormDrawer";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import Pagination from "../../components/commonfeature/pagination";
+import Pagination from "@/components/common/Pagination";
 
 type MerchantProps = {
   merchants: MerchantData[];

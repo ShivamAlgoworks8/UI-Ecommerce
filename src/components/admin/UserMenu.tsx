@@ -10,11 +10,12 @@ import {
   Sun,
   UserRound,
 } from "lucide-react";
-import type { ThemeMode } from "../../App";
+import type { ThemeMode } from "@/app/types";
 
 type UserMenuProps = {
   themeMode: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
+  onLogout: () => void;
 };
 
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
@@ -23,7 +24,7 @@ const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: "system", label: "Match my device", icon: Monitor },
 ];
 
-function UserMenu({ themeMode, onThemeChange }: UserMenuProps) {
+function UserMenu({ themeMode, onThemeChange, onLogout }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isThemeExpanded, setIsThemeExpanded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -119,7 +120,15 @@ function UserMenu({ themeMode, onThemeChange }: UserMenuProps) {
             </div>
           )}
           <div className="user-menu-separator" />
-          <button type="button" role="menuitem" className="user-menu-option user-menu-option-danger">
+          <button
+            type="button"
+            role="menuitem"
+            className="user-menu-option user-menu-option-danger"
+            onClick={() => {
+              setIsOpen(false);
+              onLogout();
+            }}
+          >
             <LogOut className="size-4" aria-hidden="true" />
             <span>Logout</span>
           </button>

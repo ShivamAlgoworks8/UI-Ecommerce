@@ -9,13 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Order } from "@/features/order/Orders";
-import type { Payment } from "@/features/payment/Payments";
-
-export type Customer = {
-  id: number;
-  name: string;
-};
+import type { Customer } from "@/features/customer/types";
+import type { Order } from "@/features/order/types";
+import type { Payment } from "@/features/payment/types";
 
 type CustomersProps = {
   customers: Customer[];

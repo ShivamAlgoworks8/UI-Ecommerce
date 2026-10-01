@@ -12,15 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-
-export type Notification = {
-  id: number;
-  title: string;
-  message: string;
-  type: "Info" | "Success" | "Warning" | "Alert";
-  status: "Active" | "Inactive";
-  date: string;
-};
+import type { Notification } from "@/features/notification/types";
 
 type NotificationsProps = {
   notifications: Notification[];

@@ -20,10 +20,13 @@ type AdminPageCardProps = {
   className?: string;
 };
 
+import { PackageOpen } from "lucide-react";
+
 type EmptyStateProps = {
   title: string;
   description: string;
   action?: ReactNode;
+  icon?: ReactNode;
 };
 
 function AdminPage({ children, className }: AdminPageProps) {
@@ -50,11 +53,14 @@ function AdminPageCard({ title, description, children, className }: AdminPageCar
   );
 }
 
-function EmptyState({ title, description, action }: EmptyStateProps) {
+function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   return (
-    <div className="flex min-h-56 flex-col items-center justify-center px-6 py-10 text-center">
-      <strong className="font-semibold">{title}</strong>
-      <span className="mt-2 max-w-md text-sm text-muted-foreground">{description}</span>
+    <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center animate-in fade-in-50 duration-300">
+      <div className="mb-3.5 flex size-12 items-center justify-center rounded-full bg-muted/80 ring-8 ring-muted/30">
+        {icon ?? <PackageOpen className="size-6 text-muted-foreground" aria-hidden="true" />}
+      </div>
+      <strong className="text-base font-semibold tracking-tight text-foreground">{title}</strong>
+      <span className="mt-1.5 max-w-sm text-sm text-muted-foreground leading-relaxed">{description}</span>
       {action && <div className="mt-5">{action}</div>}
     </div>
   );

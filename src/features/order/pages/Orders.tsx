@@ -1,6 +1,13 @@
 import { startTransition, useEffect, useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
 import DataTable from "@/components/admin/DataTable";
 import FormDrawer from "@/components/admin/FormDrawer";
@@ -11,17 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-export type Order = {
-  id: number;
-  orderId: string;
-  customer: string;
-  product: string;
-  amount: number;
-  paymentStatus: "Paid" | "Pending" | "Failed";
-  orderStatus: "Processing" | "Delivered" | "Cancelled" | "Returned";
-  date: string;
-};
+import type { Order } from "@/features/order/types";
 
 type OrdersProps = {
   orders: Order[];
@@ -122,6 +119,23 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
     setSelectedOrderIds((previous) => previous.filter((selectedId) => selectedId !== id));
   };
 
+  const [sortField, setSortField] = useState<"orderId" | "customer" | "date" | "amount" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: "orderId" | "customer" | "date" | "amount") => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortField(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredOrders = orders.filter((order) => {
     const matchesSearch = [
       order.orderId,
@@ -137,6 +151,41 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
+  const sortedOrders = [...filteredOrders].sort((first, second) => {
+    if (!sortField) return 0;
+    const aVal = first[sortField];
+    const bVal = second[sortField];
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    const aStr = String(aVal).toLowerCase();
+    const bStr = String(bVal).toLowerCase();
+    return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+  });
+
+  const exportCSV = () => {
+    if (sortedOrders.length === 0) return;
+    const headers = ["Order ID", "Customer", "Product", "Amount", "Payment Status", "Order Status", "Date"];
+    const rows = sortedOrders.map((o) => [
+      `"${o.orderId.replace(/"/g, '""')}"`,
+      `"${o.customer.replace(/"/g, '""')}"`,
+      `"${o.product.replace(/"/g, '""')}"`,
+      o.amount,
+      `"${o.paymentStatus}"`,
+      `"${o.orderStatus}"`,
+      `"${o.date}"`,
+    ]);
+    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `nexora_orders_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setToastMessage("Orders exported to CSV");
+  };
+
   const toggleOrder = (id: number) => {
     setSelectedOrderIds((previous) => previous.includes(id)
       ? previous.filter((selectedId) => selectedId !== id)
@@ -145,7 +194,7 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
   };
 
   const toggleVisibleOrders = () => {
-    const visibleIds = filteredOrders.map((order) => order.id);
+    const visibleIds = sortedOrders.map((order) => order.id);
     const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedOrderIds.includes(id));
     setSelectedOrderIds((previous) => allSelected
       ? previous.filter((id) => !visibleIds.includes(id))
@@ -180,12 +229,50 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
     setToastMessage("Selected orders deleted");
   };
 
+  const orderChips = [
+    { id: "All", label: "All Orders" },
+    { id: "Processing", label: "Processing" },
+    { id: "Delivered", label: "Delivered" },
+    { id: "Cancelled", label: "Cancelled" },
+    { id: "Returned", label: "Returned" },
+  ];
+
   return (
     <AdminPage>
-      <AdminPageHeader title="Orders" description="View and manage customer orders." action={<Button onClick={openAddModal}><Plus />Add Order</Button>} />
+      <AdminPageHeader
+        title="Orders"
+        description="Fulfill, filter, and track customer shipments and transaction orders."
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5" disabled={sortedOrders.length === 0}>
+              <Download className="size-4" />
+              Export CSV
+            </Button>
+            <Button size="sm" onClick={openAddModal} className="gap-1.5 shadow-sm">
+              <Plus className="size-4" />
+              Add Order
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Quick Filter Chips */}
+      <div className="filter-chips-bar" role="group" aria-label="Order status filters">
+        {orderChips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`filter-chip ${statusFilter === chip.id ? "filter-chip-active" : ""}`}
+            onClick={() => setStatusFilter(chip.id as any)}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       <DataTable
-        title="Order list"
-        description="Orders placed by customers will appear here."
+        title="Orders ledger"
+        description="Live records of purchases placed across your storefront."
         toolbar={
           <div className="order-toolbar">
             <Select value={statusFilter} onValueChange={(value: "All" | Order["orderStatus"]) => setStatusFilter(value)}>
@@ -212,42 +299,90 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
                   <SelectItem value="Returned">Returned</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" disabled={!bulkStatus || selectedOrderIds.length === 0} onClick={updateSelectedStatuses}>Apply status</Button>
-              <Button variant="outline" disabled={selectedOrderIds.length === 0} onClick={deleteSelectedOrders}><Trash2 />Delete selected</Button>
+              <Button variant="outline" size="sm" disabled={!bulkStatus || selectedOrderIds.length === 0} onClick={updateSelectedStatuses}>Apply status</Button>
+              <Button variant="outline" size="sm" disabled={selectedOrderIds.length === 0} onClick={deleteSelectedOrders}><Trash2 className="size-3.5" />Delete selected</Button>
             </div>
           </div>
         }
       >
-        {filteredOrders.length === 0 ? (
+        {sortedOrders.length === 0 ? (
           orders.length === 0
-            ? <EmptyState title="No orders yet" description="Add an order to see it listed here." action={<Button onClick={openAddModal}><Plus />Add Order</Button>} />
-            : <EmptyState title="No orders found" description="Try a different search." />
+            ? <EmptyState title="No orders yet" description="Add an order to see it listed here." action={<Button onClick={openAddModal}><Plus className="size-4 mr-1.5" />Add Order</Button>} />
+            : <EmptyState title="No orders match your filter" description="Try clearing dates or selecting a different status chip." />
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="bg-background hover:bg-background">
-                <TableHead className="w-12 px-[18px]">
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="w-12 px-4">
                   <input
                     type="checkbox"
                     aria-label="Select filtered orders"
-                    checked={filteredOrders.length > 0 && filteredOrders.every((order) => selectedOrderIds.includes(order.id))}
+                    checked={sortedOrders.length > 0 && sortedOrders.every((order) => selectedOrderIds.includes(order.id))}
                     onChange={toggleVisibleOrders}
                   />
                 </TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Order ID</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Customer</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Product</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Amount</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Payment</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Order status</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Date</TableHead>
-                <TableHead className="h-12 px-[18px] text-right text-sm font-medium normal-case tracking-normal">Actions</TableHead>
+                <TableHead
+                  className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("orderId")}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Order ID</span>
+                    {sortField === "orderId" ? (
+                      sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("customer")}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Customer</span>
+                    {sortField === "customer" ? (
+                      sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</TableHead>
+                <TableHead
+                  className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("amount")}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Amount</span>
+                    {sortField === "amount" ? (
+                      sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment</TableHead>
+                <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order status</TableHead>
+                <TableHead
+                  className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("date")}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Date</span>
+                    {sortField === "date" ? (
+                      sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id} className="border-t border-border">
-                  <TableCell className="px-[18px] py-3">
+              {sortedOrders.map((order) => (
+                <TableRow key={order.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                  <TableCell className="px-4 py-3">
                     <input
                       type="checkbox"
                       aria-label={`Select order ${order.orderId}`}
@@ -255,19 +390,19 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
                       onChange={() => toggleOrder(order.id)}
                     />
                   </TableCell>
-                  <TableCell className="px-[18px] py-3 font-medium">{order.orderId}</TableCell>
-                  <TableCell className="px-[18px] py-3">{order.customer}</TableCell>
-                  <TableCell className="px-[18px] py-3">{order.product}</TableCell>
-                  <TableCell className="whitespace-nowrap px-[18px] py-3">
+                  <TableCell className="px-4 py-3 font-semibold text-sm">{order.orderId}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm">{order.customer}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-muted-foreground">{order.product}</TableCell>
+                  <TableCell className="whitespace-nowrap px-4 py-3 font-medium text-sm">
                     {order.amount.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
                   </TableCell>
-                  <TableCell className="px-[18px] py-3"><StatusPill status={order.paymentStatus} /></TableCell>
-                  <TableCell className="px-[18px] py-3"><StatusPill status={order.orderStatus} /></TableCell>
-                  <TableCell className="whitespace-nowrap px-[18px] py-3">{order.date}</TableCell>
-                  <TableCell className="px-[18px] py-3">
-                    <div className="flex justify-end gap-4">
-                      <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => openEditModal(order)}>Edit</button>
-                      <button type="button" className="text-sm font-medium text-destructive hover:underline" onClick={() => handleDelete(order.id)}>Delete</button>
+                  <TableCell className="px-4 py-3"><StatusPill status={order.paymentStatus} /></TableCell>
+                  <TableCell className="px-4 py-3"><StatusPill status={order.orderStatus} /></TableCell>
+                  <TableCell className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{order.date}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex justify-end gap-3">
+                      <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => openEditModal(order)}>Edit</button>
+                      <button type="button" className="text-xs font-semibold text-destructive hover:underline" onClick={() => handleDelete(order.id)}>Delete</button>
                   </div></TableCell>
                 </TableRow>
               ))}

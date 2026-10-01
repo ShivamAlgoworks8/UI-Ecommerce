@@ -1,6 +1,13 @@
 import { startTransition, useEffect, useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
 import DataTable from "@/components/admin/DataTable";
 import FormDrawer from "@/components/admin/FormDrawer";
@@ -12,20 +19,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import type { MerchantData } from "../../App";
-import Pagination from "../../components/commonfeature/pagination";
-
-export type ProductData = {
-  id: string;
-  merchant: string;
-  productName: string;
-  price: number;
-  stock: number;
-  description: string;
-  productType: string;
-  status: string;
-  image: string;
-};
+import Pagination from "@/components/common/Pagination";
+import type { MerchantData } from "@/features/merchant/types";
+import type { ProductData } from "@/features/product/types";
 
 type ProductProps = {
   merchants: MerchantData[];
@@ -237,6 +233,23 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     setToastMessage("Selected products deleted");
   };
 
+  const [sortField, setSortField] = useState<"productName" | "price" | "stock" | "productType" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: "productName" | "price" | "stock" | "productType") => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortField(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   const filteredProducts = products.filter((product) => {
     const searchValue = searchTerm.toLowerCase();
     const matchesSearch = product.productName.toLowerCase().includes(searchValue)
@@ -250,47 +263,130 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     return matchesSearch && matchesStatus;
   });
 
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const sortedProducts = [...filteredProducts].sort((first, second) => {
+    if (!sortField) return 0;
+    const aVal = first[sortField];
+    const bVal = second[sortField];
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    const aStr = String(aVal).toLowerCase();
+    const bStr = String(bVal).toLowerCase();
+    return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+  });
+
+  const exportCSV = () => {
+    if (sortedProducts.length === 0) return;
+    const headers = ["Product Name", "Merchant", "Price", "Stock", "Category", "Status"];
+    const rows = sortedProducts.map((p) => [
+      `"${p.productName.replace(/"/g, '""')}"`,
+      `"${(p.merchant || "").replace(/"/g, '""')}"`,
+      p.price,
+      p.stock,
+      `"${p.productType.replace(/"/g, '""')}"`,
+      `"${p.status}"`,
+    ]);
+    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `nexora_products_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setToastMessage("Products exported to CSV");
+  };
+
+  const totalPages = Math.ceil(sortedProducts.length / productsPerPage);
   const visiblePage = Math.min(currentPage, Math.max(totalPages, 1));
   const startIndex = (visiblePage - 1) * productsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage);
+  const currentProducts = sortedProducts.slice(startIndex, startIndex + productsPerPage);
+
+  const filterChips = [
+    { id: "All", label: "All Items" },
+    { id: "Available", label: "In Stock" },
+    { id: "Low stock", label: "Low Stock (1-5)" },
+    { id: "Out of stock", label: "Out of Stock" },
+  ];
 
   return (
     <AdminPage>
-      <AdminPageHeader title="Products" description="View and manage products in your store." action={<Button onClick={openAddModal}><Plus />Add Product</Button>} />
+      <AdminPageHeader
+        title="Products"
+        description="View and manage products, inventories, and pricing across your store."
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5" disabled={sortedProducts.length === 0}>
+              <Download className="size-4" />
+              Export CSV
+            </Button>
+            <Button size="sm" onClick={openAddModal} className="gap-1.5 shadow-sm">
+              <Plus className="size-4" />
+              Add Product
+            </Button>
+          </div>
+        }
+      />
+
       <section className="inventory-summary" aria-label="Inventory overview">
-        <article><span>Total units</span><strong>{products.reduce((total, product) => total + product.stock, 0)}</strong></article>
-        <article><span>Low stock</span><strong>{products.filter((product) => product.stock > 0 && product.stock <= 5).length}</strong></article>
-        <article><span>Out of stock</span><strong>{products.filter((product) => product.stock <= 0).length}</strong></article>
+        <article>
+          <span>Total catalog units</span>
+          <strong>{products.reduce((total, product) => total + product.stock, 0)}</strong>
+        </article>
+        <article>
+          <span>Low stock warning</span>
+          <strong className="text-amber-600 dark:text-amber-400">
+            {products.filter((product) => product.stock > 0 && product.stock <= 5).length}
+          </strong>
+        </article>
+        <article>
+          <span>Out of stock</span>
+          <strong className="text-destructive">
+            {products.filter((product) => product.stock <= 0).length}
+          </strong>
+        </article>
       </section>
+
+      {/* Quick Filter Chips */}
+      <div className="filter-chips-bar" role="group" aria-label="Quick status filters">
+        {filterChips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`filter-chip ${statusFilter === chip.id ? "filter-chip-active" : ""}`}
+            onClick={() => {
+              setStatusFilter(chip.id);
+              setCurrentPage(1);
+            }}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       <DataTable
-        title="Product list"
-        description="Products added to your store will appear here."
+        title="Product catalog"
+        description="Showing active products in your storefront inventory."
         toolbar={
           <div className="product-toolbar">
-            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setCurrentPage(1); }}>
-              <SelectTrigger aria-label="Filter inventory" className="sm:w-44"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All inventory</SelectItem>
-                <SelectItem value="Low stock">Low stock (1–5)</SelectItem>
-                <SelectItem value="Out of stock">Out of stock</SelectItem>
-                <SelectItem value="Available">Available status</SelectItem>
-                <SelectItem value="NA">NA status</SelectItem>
-              </SelectContent>
-            </Select>
             <div className="bulk-actions">
               <span>{selectedProductIds.length} selected</span>
               <Input
                 aria-label="Set stock for selected products"
                 type="number"
                 min="0"
-                placeholder="Set stock"
+                placeholder="New stock"
                 className="bulk-stock-input"
                 value={bulkStock}
                 onChange={(event) => setBulkStock(event.target.value)}
               />
-              <Button variant="outline" disabled={!bulkStock || selectedProductIds.length === 0} onClick={applyBulkStock}>Update stock</Button>
-              <Button variant="outline" disabled={selectedProductIds.length === 0} onClick={deleteSelectedProducts}><Trash2 />Delete selected</Button>
+              <Button variant="outline" size="sm" disabled={!bulkStock || selectedProductIds.length === 0} onClick={applyBulkStock}>
+                Update stock
+              </Button>
+              <Button variant="outline" size="sm" disabled={selectedProductIds.length === 0} onClick={deleteSelectedProducts}>
+                <Trash2 className="size-3.5" />
+                Delete selected
+              </Button>
             </div>
           </div>
         }
@@ -299,16 +395,16 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
           <EmptyState
             title="No products yet"
             description="Once products are added, you will be able to view and manage them here."
-            action={<Button onClick={openAddModal}><Plus />Add Product</Button>}
+            action={<Button onClick={openAddModal}><Plus className="size-4 mr-1.5" />Add Product</Button>}
           />
         ) : (
-          filteredProducts.length === 0 ? (
-            <EmptyState title="No products found" description="Try changing your search or filter." />
+          sortedProducts.length === 0 ? (
+            <EmptyState title="No products found" description="Try changing your search term or filter chips." />
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-background hover:bg-background">
-                  <TableHead className="w-12 px-[18px]">
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-12 px-4">
                     <input
                       type="checkbox"
                       aria-label="Select visible products"
@@ -316,20 +412,68 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
                       onChange={toggleVisibleProducts}
                     />
                   </TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Merchant</TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Product Name</TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Price</TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Stock</TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Product Type</TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Status</TableHead>
-                  <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Image</TableHead>
-                  <TableHead className="h-12 px-[18px] text-right text-sm font-medium normal-case tracking-normal">Action</TableHead>
+                  <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Merchant</TableHead>
+                  <TableHead
+                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                    onClick={() => handleSort("productName")}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Product Name</span>
+                      {sortField === "productName" ? (
+                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                    onClick={() => handleSort("price")}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Price</span>
+                      {sortField === "price" ? (
+                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                    onClick={() => handleSort("stock")}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Stock</span>
+                      {sortField === "stock" ? (
+                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                    onClick={() => handleSort("productType")}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Category</span>
+                      {sortField === "productType" ? (
+                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                  <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image</TableHead>
+                  <TableHead className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentProducts.map((product) => (
-                  <TableRow key={product.id} className="border-t border-border">
-                    <TableCell className="px-[18px] py-3">
+                  <TableRow key={product.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <TableCell className="px-4 py-3">
                       <input
                         type="checkbox"
                         aria-label={`Select ${product.productName}`}
@@ -337,21 +481,21 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
                         onChange={() => toggleProductSelection(product.id)}
                       />
                     </TableCell>
-                    <TableCell className="px-[18px] py-3">{product.merchant || "-"}</TableCell>
-                    <TableCell className="px-[18px] py-3 font-medium">{product.productName}</TableCell>
-                    <TableCell className="whitespace-nowrap px-[18px] py-3">
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground">{product.merchant || "-"}</TableCell>
+                    <TableCell className="px-4 py-3 font-semibold text-sm">{product.productName}</TableCell>
+                    <TableCell className="whitespace-nowrap px-4 py-3 font-medium text-sm">
                       {product.price.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
                     </TableCell>
-                    <TableCell className="px-[18px] py-3">{product.stock}</TableCell>
-                    <TableCell className="px-[18px] py-3">{product.productType}</TableCell>
-                    <TableCell className="px-[18px] py-3">
+                    <TableCell className="px-4 py-3 text-sm">{product.stock}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm">{product.productType}</TableCell>
+                    <TableCell className="px-4 py-3">
                       <StatusPill status={product.stock <= 0 ? "Out of stock" : product.stock <= 5 ? "Low stock" : product.status} />
                     </TableCell>
-                    <TableCell className="max-w-40 truncate px-[18px] py-3 text-muted-foreground">{product.image || "No image"}</TableCell>
-                    <TableCell className="px-[18px] py-3">
-                      <div className="flex justify-end gap-4">
-                        <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => openEditModal(product)}>Edit</button>
-                        <button type="button" className="text-sm font-medium text-destructive hover:underline" onClick={() => handleDeleteProduct(product.id)}>Delete</button>
+                    <TableCell className="max-w-40 truncate px-4 py-3 text-xs text-muted-foreground">{product.image || "No image"}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex justify-end gap-3">
+                        <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => openEditModal(product)}>Edit</button>
+                        <button type="button" className="text-xs font-semibold text-destructive hover:underline" onClick={() => handleDeleteProduct(product.id)}>Delete</button>
                       </div>
                     </TableCell>
                   </TableRow>

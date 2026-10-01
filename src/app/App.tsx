@@ -1,32 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import AdminHeader from "./components/admin/AdminHeader";
-import Dashboard from "./pages/admin/Dashboard";
-import Orders from "./features/order/Orders";
-import Payments from "./features/payment/Payments";
-import Notifications from "./features/notification/Notifications";
-import Products from "./features/product/Products";
-import Merchant from "./features/merchant/Merchant";
-import Customers from "./features/customer/Customers";
-import Categories from "./features/category/Categories";
-import Sidebar from "./components/admin/Sidebar";
-import type { Order } from "./features/order/Orders";
-import type { Payment } from "./features/payment/Payments";
-import type { Notification } from "./features/notification/Notifications";
-import type { ProductData } from "./features/product/Products";
-import type { Customer } from "./features/customer/Customers";
-
-export type ThemeMode = "light" | "dark" | "system";
-
-export type MerchantData = {
-  id: number;
-  merchantName: string;
-  brandName: string;
-  productType: string;
-  status: string;
-  image: string;
-};
+import Login from "@/pages/auth/Login/Login";
+import AdminHeader from "@/components/admin/AdminHeader";
+import Sidebar from "@/components/admin/Sidebar";
+import Categories from "@/features/category/pages/Categories";
+import Customers from "@/features/customer/pages/Customers";
+import Dashboard from "@/features/dashboard/pages/Dashboard";
+import Merchant from "@/features/merchant/pages/Merchant";
+import Notifications from "@/features/notification/pages/Notifications";
+import Orders from "@/features/order/pages/Orders";
+import Payments from "@/features/payment/pages/Payments";
+import Products from "@/features/product/pages/Products";
+import type { Customer } from "@/features/customer/types";
+import type { MerchantData } from "@/features/merchant/types";
+import type { Notification } from "@/features/notification/types";
+import type { Order } from "@/features/order/types";
+import type { Payment } from "@/features/payment/types";
+import type { ProductData } from "@/features/product/types";
+import type { ThemeMode } from "@/app/types";
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [searchByPage, setSearchByPage] = useState<Record<string, string>>({});
   const searchTerm = searchByPage[currentPage] ?? "";
@@ -139,6 +132,10 @@ function App() {
     ...products.map((product) => product.productType).filter(Boolean),
   ])];
 
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  }
+
   return (
     <div className="app-shell min-h-screen bg-background text-foreground">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
@@ -151,6 +148,9 @@ function App() {
           onCreate={handleCreate}
           themeMode={themeMode}
           onThemeChange={handleThemeChange}
+          onLogout={() => setIsLoggedIn(false)}
+          notifications={notifications}
+          onClearNotifications={() => setNotifications([])}
         />
         <div className="page-content">
           <section hidden={currentPage !== "dashboard"}>

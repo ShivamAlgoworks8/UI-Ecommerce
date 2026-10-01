@@ -11,17 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-export type Payment = {
-  id: number;
-  paymentId: string;
-  customer: string;
-  orderId: string;
-  amount: number;
-  paymentMethod: "UPI" | "Net Banking" | "Debit Card" | "Credit Card" | "Cash on Delivery" | "Gift Card";
-  status: "Paid" | "Pending" | "Failed";
-  date: string;
-};
+import type { Payment } from "@/features/payment/types";
 
 type PaymentsProps = {
   payments: Payment[];

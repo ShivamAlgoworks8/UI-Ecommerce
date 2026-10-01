@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { ProductData } from "@/features/product/Products";
+import type { ProductData } from "@/features/product/types";
 
 type CategoriesProps = {
   categories: string[];

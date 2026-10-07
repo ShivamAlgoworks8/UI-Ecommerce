@@ -139,15 +139,59 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     }
 
     if (isEditMode && editingProductId !== null) {
-      setProducts((previousProducts) => previousProducts.map((product) =>
-        product.id === editingProductId
-          ? { ...product, merchant: merchant || product.merchant, productName: productName.trim(), price: Number(price), stock: Number(stock), description: description.trim(), productType, status, image }
-          : product,
-      ));
-      closeModal();
-      setToastMessage("Product updated successfully");
-      return;
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/products/${editingProductId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: productName.trim(),
+          price: Number(price),
+          stock: Number(stock),
+          description: description.trim(),
+          productType,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to update product");
     }
+
+    const updatedProduct = await response.json();
+
+    setProducts((previousProducts) =>
+      previousProducts.map((product) =>
+        product.id === editingProductId
+          ? {
+              ...product,
+              merchant: merchant || product.merchant,
+              productName: updatedProduct.name,
+              price: updatedProduct.price,
+              stock: updatedProduct.stock,
+              description: updatedProduct.description,
+              productType: updatedProduct.productType,
+              status,
+              image,
+            }
+          : product,
+      ),
+    );
+
+    closeModal();
+    setToastMessage("Product updated successfully");
+    return;
+  } catch (error) {
+    console.error("Error updating product:", error);
+    setToastMessage(
+      error instanceof Error ? error.message : "Failed to update product",
+    );
+    return;
+  }
+}
 
     try {
       const response = await fetch("http://localhost:8080/api/products", {
@@ -191,12 +235,47 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     }
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this product?");
-    if (!confirmDelete) return;
-    setProducts((previousProducts) => previousProducts.filter((product) => product.id !== productId));
-    setSelectedProductIds((previous) => previous.filter((id) => id !== productId));
-  };
+  const handleDeleteProduct = async (productId: string) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this product?",
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/products/${productId}`,
+      {
+        method: "DELETE",
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete product");
+    }
+
+    const deleted = await response.json();
+
+    if (deleted !== true) {
+      throw new Error("Product could not be deleted");
+    }
+
+    setProducts((previousProducts) =>
+      previousProducts.filter((product) => product.id !== productId),
+    );
+
+    setSelectedProductIds((previous) =>
+      previous.filter((id) => id !== productId),
+    );
+
+    setToastMessage("Product deleted successfully");
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    setToastMessage(
+      error instanceof Error ? error.message : "Failed to delete product",
+    );
+  }
+};
 
   const toggleProductSelection = (productId: string) => {
     setSelectedProductIds((previous) => previous.includes(productId)

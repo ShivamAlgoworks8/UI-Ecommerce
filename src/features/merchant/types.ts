@@ -1,5 +1,5 @@
 export type MerchantData = {
-  id: number;
+  id: string;
   merchantName: string;
   brandName: string;
   productType: string;

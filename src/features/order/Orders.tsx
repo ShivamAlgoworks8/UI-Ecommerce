@@ -42,7 +42,7 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
   const [statusFilter, setStatusFilter] = useState<"All" | Order["orderStatus"]>("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<Order["orderStatus"] | "">("");
 
   const resetForm = () => {
@@ -68,6 +68,21 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
       onCreateRequestHandled(createRequest.id);
     });
   }, [createRequest, onCreateRequestHandled]);
+  // Load orders from backend
+  useEffect(() => {
+    fetch("http://localhost:8080/api/orders")
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to fetch orders");
+        return response.json();
+      })
+      .then((data: Order[]) => {
+        setOrders(data);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch orders:", error);
+        setToastMessage("Unable to load orders");
+      });
+  }, [setOrders]);
 
   const openEditModal = (order: Order) => {
     setEditingOrder(order);
@@ -86,37 +101,95 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
     resetForm();
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!orderId.trim() || !customer.trim() || !product.trim() || !amount || !date) return;
 
-    const wasEditing = Boolean(editingOrder);
-    if (editingOrder) {
-      setOrders((previousOrders) => previousOrders.map((order) =>
-        order.id === editingOrder.id
-          ? { ...order, orderId: orderId.trim(), customer: customer.trim(), product: product.trim(), amount: Number(amount), paymentStatus, orderStatus, date }
-          : order,
-      ));
-    } else {
-      const newOrder: Order = {
-        id: Date.now(),
-        orderId: orderId.trim(),
-        customer: customer.trim(),
-        product: product.trim(),
-        amount: Number(amount),
-        paymentStatus,
-        orderStatus,
-        date,
-      };
-      setOrders((previousOrders) => [...previousOrders, newOrder]);
+    const orderData = {
+      orderId: orderId.trim(),
+      customer: customer.trim(),
+      product: product.trim(),
+      amount: Number(amount),
+      paymentStatus,
+      orderStatus,
+      date,
+    };
+
+    try {
+      if (editingOrder) {
+        // Update existing order
+        const response = await fetch(
+          `http://localhost:8080/api/orders/${editingOrder.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(orderData),
+          },
+        );
+
+        if (!response.ok) throw new Error("Failed to update order");
+
+        const updatedOrder: Order = await response.json();
+
+        setOrders((previousOrders) =>
+          previousOrders.map((order) =>
+            order.id === editingOrder.id ? updatedOrder : order,
+          ),
+        );
+
+        closeModal();
+        setToastMessage("Order updated successfully");
+      } else {
+        // Create new order
+        const response = await fetch("http://localhost:8080/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(orderData),
+        });
+
+        if (!response.ok) throw new Error("Failed to create order");
+
+        const newOrder: Order = await response.json();
+
+        setOrders((previousOrders) => [...previousOrders, newOrder]);
+
+        closeModal();
+        setToastMessage("Order added successfully");
+      }
+    } catch (error) {
+      console.error("Order request failed:", error);
+      setToastMessage("Failed to save order");
     }
-    closeModal();
-    setToastMessage(wasEditing ? "Order updated successfully" : "Order added successfully");
   };
 
-  const handleDelete = (id: number) => {
-    setOrders((previousOrders) => previousOrders.filter((order) => order.id !== id));
-    setSelectedOrderIds((previous) => previous.filter((selectedId) => selectedId !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      // Delete order from backend
+      const response = await fetch(`http://localhost:8080/api/orders/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete order");
+
+      // Remove order from table
+      setOrders((previousOrders) =>
+        previousOrders.filter((order) => order.id !== id),
+      );
+
+      setSelectedOrderIds((previous) =>
+        previous.filter((selectedId) => selectedId !== id),
+      );
+
+      setToastMessage("Order deleted successfully");
+    } catch (error) {
+      console.error("Delete order failed:", error);
+      setToastMessage("Failed to delete order");
+    }
   };
 
   const [sortField, setSortField] = useState<"orderId" | "customer" | "date" | "amount" | null>(null);
@@ -186,7 +259,7 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
     setToastMessage("Orders exported to CSV");
   };
 
-  const toggleOrder = (id: number) => {
+  const toggleOrder = (id: string) => {
     setSelectedOrderIds((previous) => previous.includes(id)
       ? previous.filter((selectedId) => selectedId !== id)
       : [...previous, id],
@@ -403,7 +476,7 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
                     <div className="flex justify-end gap-3">
                       <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => openEditModal(order)}>Edit</button>
                       <button type="button" className="text-xs font-semibold text-destructive hover:underline" onClick={() => handleDelete(order.id)}>Delete</button>
-                  </div></TableCell>
+                    </div></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -419,29 +492,29 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
         formId="order-form"
         submitLabel={editingOrder ? "Save changes" : "Save order"}
       >
-          <form id="order-form" onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2"><Label htmlFor="order-id">Order ID</Label><Input id="order-id" value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="Enter order ID" required /></div>
-              <div className="grid gap-2"><Label htmlFor="order-customer">Customer Name</Label><Input id="order-customer" value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Enter customer name" required /></div>
-              <div className="grid gap-2"><Label htmlFor="order-product">Product</Label><Input id="order-product" value={product} onChange={(event) => setProduct(event.target.value)} placeholder="Enter product name" required /></div>
-              <div className="grid gap-2"><Label htmlFor="order-amount">Amount</Label><Input id="order-amount" type="number" min="0" step="any" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" required /></div>
-              <div className="grid gap-2">
-                <Label htmlFor="order-payment-status">Payment Status</Label>
-                <Select value={paymentStatus} onValueChange={(value: Order["paymentStatus"]) => setPaymentStatus(value)}>
-                  <SelectTrigger id="order-payment-status"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Failed">Failed</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="order-status">Order Status</Label>
-                <Select value={orderStatus} onValueChange={(value: Order["orderStatus"]) => setOrderStatus(value)}>
-                  <SelectTrigger id="order-status"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="Delivered">Delivered</SelectItem><SelectItem value="Processing">Processing</SelectItem><SelectItem value="Cancelled">Cancelled</SelectItem><SelectItem value="Returned">Returned</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2"><Label htmlFor="order-date">Date</Label><Input id="order-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></div>
+        <form id="order-form" onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2"><Label htmlFor="order-id">Order ID</Label><Input id="order-id" value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="Enter order ID" required /></div>
+            <div className="grid gap-2"><Label htmlFor="order-customer">Customer Name</Label><Input id="order-customer" value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Enter customer name" required /></div>
+            <div className="grid gap-2"><Label htmlFor="order-product">Product</Label><Input id="order-product" value={product} onChange={(event) => setProduct(event.target.value)} placeholder="Enter product name" required /></div>
+            <div className="grid gap-2"><Label htmlFor="order-amount">Amount</Label><Input id="order-amount" type="number" min="0" step="any" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" required /></div>
+            <div className="grid gap-2">
+              <Label htmlFor="order-payment-status">Payment Status</Label>
+              <Select value={paymentStatus} onValueChange={(value: Order["paymentStatus"]) => setPaymentStatus(value)}>
+                <SelectTrigger id="order-payment-status"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Failed">Failed</SelectItem></SelectContent>
+              </Select>
             </div>
-          </form>
+            <div className="grid gap-2">
+              <Label htmlFor="order-status">Order Status</Label>
+              <Select value={orderStatus} onValueChange={(value: Order["orderStatus"]) => setOrderStatus(value)}>
+                <SelectTrigger id="order-status"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Delivered">Delivered</SelectItem><SelectItem value="Processing">Processing</SelectItem><SelectItem value="Cancelled">Cancelled</SelectItem><SelectItem value="Returned">Returned</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label htmlFor="order-date">Date</Label><Input id="order-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></div>
+          </div>
+        </form>
       </FormDrawer>
       <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
     </AdminPage>

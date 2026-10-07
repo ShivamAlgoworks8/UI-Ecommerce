@@ -140,7 +140,6 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
           ),
         );
 
-        closeModal();
         setToastMessage("Order updated successfully");
       } else {
         // Create new order
@@ -158,9 +157,10 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
 
         setOrders((previousOrders) => [...previousOrders, newOrder]);
 
-        closeModal();
         setToastMessage("Order added successfully");
       }
+
+      closeModal();
     } catch (error) {
       console.error("Order request failed:", error);
       setToastMessage("Failed to save order");

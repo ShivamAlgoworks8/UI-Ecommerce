@@ -161,22 +161,27 @@ function Merchant({
       return;
     }
 
+    // Request details shared by the create and update calls.
+    const jsonHeaders = {
+      "Content-Type": "application/json",
+    };
+
+    const merchantPayload = {
+      merchantName,
+      brandName,
+      productType,
+      status,
+      image,
+    };
+
     if (isEditMode && editingMerchantId !== null) {
       try {
         const response = await fetch(
           `http://localhost:8080/api/merchants/${editingMerchantId}`,
           {
             method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              merchantName,
-              brandName,
-              productType,
-              status,
-              image,
-            }),
+            headers: jsonHeaders,
+            body: JSON.stringify(merchantPayload),
           }
         );
 
@@ -200,25 +205,15 @@ function Merchant({
         setToastMessage("Unable to update merchant");
         return;
       }
-    }
-
-    else {
+    } else {
       try {
         // Send the new merchant details to the Spring Boot backend.
         const response = await fetch(
           "http://localhost:8080/api/merchants",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              merchantName,
-              brandName,
-              productType,
-              status,
-              image,
-            }),
+            headers: jsonHeaders,
+            body: JSON.stringify(merchantPayload),
           }
         );
 
@@ -256,38 +251,39 @@ function Merchant({
   };
 
   const handleDeleteMerchant = async (merchantId: string) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this merchant?"
-  );
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this merchant?"
+    );
 
-  if (!confirmDelete) return;
+    if (!confirmDelete) return;
 
-  try {
-    // Delete the merchant from the backend.
-    const response = await fetch(
-      `http://localhost:8080/api/merchants/${merchantId}`,
-      {
-        method: "DELETE",
+    try {
+      // Delete the merchant from the backend.
+      const response = await fetch(
+        `http://localhost:8080/api/merchants/${merchantId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete merchant");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Failed to delete merchant");
+      // Remove the merchant from the frontend after backend deletion.
+      setMerchants((previousMerchants) =>
+        previousMerchants.filter(
+          (merchant) => merchant.id !== merchantId
+        )
+      );
+
+      setToastMessage("Merchant deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete merchant:", error);
+      setToastMessage("Unable to delete merchant");
     }
+  };
 
-    // Remove the merchant from the frontend after backend deletion.
-    setMerchants((previousMerchants) =>
-      previousMerchants.filter(
-        (merchant) => merchant.id !== merchantId
-      )
-    );
-
-    setToastMessage("Merchant deleted successfully");
-  } catch (error) {
-    console.error("Failed to delete merchant:", error);
-    setToastMessage("Unable to delete merchant");
-  }
-};
   // Applies the search and status filter to the merchant list.
   const filteredMerchants = merchants.filter((merchant) => {
     const searchValue = searchTerm.toLowerCase();

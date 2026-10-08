@@ -55,10 +55,13 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<Order["orderStatus"] | "">("");
   
+  // React Query - Fetch Orders
+  // Load the current order list from the service.
   const { data: fetchedOrders, error } = useQuery({
   queryKey: ["orders"],
   queryFn: getOrders,
 });
+// Keep the shared order list in sync after creating an order.
 const createOrderMutation = useMutation({
   mutationFn: createOrder,
 
@@ -73,6 +76,7 @@ const createOrderMutation = useMutation({
     setToastMessage("Failed to save order");
   },
 });
+// Persist edits and replace the matching order with the server response.
 const updateOrderMutation = useMutation({
   mutationFn: ({ id, orderData }: { id: string; orderData: Omit<Order, "id"> }) =>
     updateOrder(id, orderData),
@@ -103,7 +107,8 @@ useEffect(() => {
   }
 }, [fetchedOrders, error, setOrders]);
 
-  const resetForm = () => {
+    // Form state is reset whenever the drawer starts a new order or closes.
+    const resetForm = () => {
     setOrderId("");
     setCustomer("");
     setProduct("");
@@ -145,6 +150,7 @@ useEffect(() => {
     resetForm();
   };
 
+  // Validate the required fields, then create a new order or save the current edit.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -174,6 +180,7 @@ try {
 }
   };
 
+  // Delete one order and remove it from the local list after the API succeeds.
   const deleteOrderMutation = useMutation({
   mutationFn: deleteOrder,
 
@@ -194,6 +201,7 @@ try {
     setToastMessage("Failed to delete order");
   },
 });
+// Bulk Delete Orders
 // Delete multiple selected orders
 const deleteSelectedOrdersMutation = useMutation({
   mutationFn: deleteOrders,
@@ -213,7 +221,7 @@ const deleteSelectedOrdersMutation = useMutation({
   },
 });
 
-// Update status of multiple selected orders
+// Bulk Status Update: persist each selected order's status and apply server results.
 const updateSelectedStatusesMutation = useMutation({
   mutationFn: async ({
     ids,
@@ -260,6 +268,7 @@ const handleDelete = (id: string) => {
   const [sortField, setSortField] = useState<"orderId" | "customer" | "date" | "amount" | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  // Cycle the active column through ascending, descending, and unsorted.
   const handleSort = (field: "orderId" | "customer" | "date" | "amount") => {
     if (sortField === field) {
       if (sortDirection === "asc") {
@@ -274,6 +283,8 @@ const handleDelete = (id: string) => {
     }
   };
 
+  // Filtering and Sorting
+  // Apply the search term and active status/date filters before sorting.
   const filteredOrders = orders.filter((order) => {
     const matchesSearch = [
       order.orderId,
@@ -289,6 +300,7 @@ const handleDelete = (id: string) => {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
+  // Sort a copy so the source order list remains unchanged.
   const sortedOrders = [...filteredOrders].sort((first, second) => {
     if (!sortField) return 0;
     const aVal = first[sortField];
@@ -301,6 +313,7 @@ const handleDelete = (id: string) => {
     return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
   });
 
+  // Export the currently visible, sorted orders as a downloadable CSV.
   const exportCSV = () => {
     if (sortedOrders.length === 0) return;
     const headers = ["Order ID", "Customer", "Product", "Amount", "Payment Status", "Order Status", "Date"];
@@ -324,6 +337,8 @@ const handleDelete = (id: string) => {
     setToastMessage("Orders exported to CSV");
   };
 
+  // Order Selection
+  // Keep selected IDs in step with individual and visible-row checkbox changes.
   const toggleOrder = (id: string) => {
     setSelectedOrderIds((previous) =>
       previous.includes(id)

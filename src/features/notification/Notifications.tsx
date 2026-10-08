@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/features/notification/types";
+import type { CreateRequest } from "@/app/types";
 
 type NotificationsProps = {
   notifications: Notification[];
   setNotifications: Dispatch<SetStateAction<Notification[]>>;
   searchTerm: string;
-  createRequest: { page: string; id: number } | null;
+  createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
 };
 

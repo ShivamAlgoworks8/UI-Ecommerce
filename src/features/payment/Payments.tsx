@@ -12,12 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Payment } from "@/features/payment/types";
+import type { CreateRequest } from "@/app/types";
+import { formatINR } from "@/lib/utils";
 
 type PaymentsProps = {
   payments: Payment[];
   setPayments: Dispatch<SetStateAction<Payment[]>>;
   searchTerm: string;
-  createRequest: { page: string; id: number } | null;
+  createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
 };
 
@@ -144,7 +146,7 @@ function Payments({ payments, setPayments, searchTerm, createRequest, onCreateRe
                   <TableCell className="px-[18px] py-3">{payment.customer}</TableCell>
                   <TableCell className="px-[18px] py-3">{payment.orderId}</TableCell>
                   <TableCell className="whitespace-nowrap px-[18px] py-3">
-                    {payment.amount.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                    {formatINR(payment.amount)}
                   </TableCell>
                   <TableCell className="px-[18px] py-3">{payment.paymentMethod}</TableCell>
                   <TableCell className="px-[18px] py-3"><StatusPill status={payment.status} /></TableCell>

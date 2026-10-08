@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+
 import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
 import DataTable from "@/components/admin/DataTable";
 import FormDrawer from "@/components/admin/FormDrawer";
@@ -19,12 +20,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Order } from "@/features/order/types";
+import type { CreateRequest } from "@/app/types";
+import { formatINR } from "@/lib/utils";
+import { useMutation, useQuery } from "@tanstack/react-query";import {
+  createOrder,
+  deleteOrder,
+  deleteOrders,
+  getOrders,
+  updateOrder,
+} from "@/features/order/orderService";
 
 type OrdersProps = {
   orders: Order[];
   setOrders: Dispatch<SetStateAction<Order[]>>;
   searchTerm: string;
-  createRequest: { page: string; id: number } | null;
+  createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
 };
 
@@ -44,6 +54,54 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
   const [dateTo, setDateTo] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<Order["orderStatus"] | "">("");
+  
+  const { data: fetchedOrders, error } = useQuery({
+  queryKey: ["orders"],
+  queryFn: getOrders,
+});
+const createOrderMutation = useMutation({
+  mutationFn: createOrder,
+
+  onSuccess: (newOrder) => {
+    setOrders((previousOrders) => [...previousOrders, newOrder]);
+    closeModal();
+    setToastMessage("Order added successfully");
+  },
+
+  onError: (error) => {
+    console.error("Order request failed:", error);
+    setToastMessage("Failed to save order");
+  },
+});
+const updateOrderMutation = useMutation({
+  mutationFn: ({ id, orderData }: { id: string; orderData: Omit<Order, "id"> }) =>
+    updateOrder(id, orderData),
+
+  onSuccess: (updatedOrder) => {
+    setOrders((previousOrders) =>
+      previousOrders.map((order) =>
+        order.id === updatedOrder.id ? updatedOrder : order,
+      ),
+    );
+    closeModal();
+    setToastMessage("Order updated successfully");
+  },
+
+  onError: (error) => {
+    console.error("Order update failed:", error);
+    setToastMessage("Failed to update order");
+  },
+});
+useEffect(() => {
+  if (fetchedOrders) {
+    setOrders(fetchedOrders);
+  }
+
+  if (error) {
+    console.error("Failed to fetch orders:", error);
+    setToastMessage("Unable to load orders");
+  }
+}, [fetchedOrders, error, setOrders]);
 
   const resetForm = () => {
     setOrderId("");
@@ -68,21 +126,7 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
       onCreateRequestHandled(createRequest.id);
     });
   }, [createRequest, onCreateRequestHandled]);
-  // Load orders from backend
-  useEffect(() => {
-    fetch("http://localhost:8080/api/orders")
-      .then((response) => {
-        if (!response.ok) throw new Error("Failed to fetch orders");
-        return response.json();
-      })
-      .then((data: Order[]) => {
-        setOrders(data);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch orders:", error);
-        setToastMessage("Unable to load orders");
-      });
-  }, [setOrders]);
+ 
 
   const openEditModal = (order: Order) => {
     setEditingOrder(order);
@@ -115,82 +159,103 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
       orderStatus,
       date,
     };
-
-    try {
-      if (editingOrder) {
-        // Update existing order
-        const response = await fetch(
-          `http://localhost:8080/api/orders/${editingOrder.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(orderData),
-          },
-        );
-
-        if (!response.ok) throw new Error("Failed to update order");
-
-        const updatedOrder: Order = await response.json();
-
-        setOrders((previousOrders) =>
-          previousOrders.map((order) =>
-            order.id === editingOrder.id ? updatedOrder : order,
-          ),
-        );
-
-        setToastMessage("Order updated successfully");
-      } else {
-        // Create new order
-        const response = await fetch("http://localhost:8080/api/orders", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(orderData),
-        });
-
-        if (!response.ok) throw new Error("Failed to create order");
-
-        const newOrder: Order = await response.json();
-
-        setOrders((previousOrders) => [...previousOrders, newOrder]);
-
-        setToastMessage("Order added successfully");
-      }
-
-      closeModal();
-    } catch (error) {
-      console.error("Order request failed:", error);
-      setToastMessage("Failed to save order");
-    }
+try {
+ if (editingOrder) {
+  updateOrderMutation.mutate({
+    id: editingOrder.id,
+    orderData,
+  });
+} else {
+    createOrderMutation.mutate(orderData);
+  }
+} catch (error) {
+  console.error("Order request failed:", error);
+  setToastMessage("Failed to save order");
+}
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      // Delete order from backend
-      const response = await fetch(`http://localhost:8080/api/orders/${id}`, {
-        method: "DELETE",
-      });
+  const deleteOrderMutation = useMutation({
+  mutationFn: deleteOrder,
 
-      if (!response.ok) throw new Error("Failed to delete order");
+  onSuccess: (_, deletedId) => {
+    setOrders((previousOrders) =>
+      previousOrders.filter((order) => order.id !== deletedId),
+    );
 
-      // Remove order from table
-      setOrders((previousOrders) =>
-        previousOrders.filter((order) => order.id !== id),
-      );
+    setSelectedOrderIds((previous) =>
+      previous.filter((selectedId) => selectedId !== deletedId),
+    );
 
-      setSelectedOrderIds((previous) =>
-        previous.filter((selectedId) => selectedId !== id),
-      );
+    setToastMessage("Order deleted successfully");
+  },
 
-      setToastMessage("Order deleted successfully");
-    } catch (error) {
-      console.error("Delete order failed:", error);
-      setToastMessage("Failed to delete order");
-    }
-  };
+  onError: (error) => {
+    console.error("Delete order failed:", error);
+    setToastMessage("Failed to delete order");
+  },
+});
+// Delete multiple selected orders
+const deleteSelectedOrdersMutation = useMutation({
+  mutationFn: deleteOrders,
+
+  onSuccess: (_, deletedIds) => {
+    setOrders((previousOrders) =>
+      previousOrders.filter((order) => !deletedIds.includes(order.id)),
+    );
+
+    setSelectedOrderIds([]);
+    setToastMessage("Selected orders deleted successfully");
+  },
+
+  onError: (error) => {
+    console.error("Bulk delete orders failed:", error);
+    setToastMessage("Failed to delete selected orders");
+  },
+});
+
+// Update status of multiple selected orders
+const updateSelectedStatusesMutation = useMutation({
+  mutationFn: async ({
+    ids,
+    status,
+  }: {
+    ids: string[];
+    status: Order["orderStatus"];
+  }) => {
+    const updatedOrders = await Promise.all(
+      ids.map((id) =>
+        updateOrder(id, {
+          ...orders.find((order) => order.id === id)!,
+          orderStatus: status,
+        }),
+      ),
+    );
+
+    return updatedOrders;
+  },
+
+  onSuccess: (updatedOrders) => {
+    setOrders((previousOrders) =>
+      previousOrders.map(
+        (order) =>
+          updatedOrders.find((updated) => updated.id === order.id) || order,
+      ),
+    );
+
+    setSelectedOrderIds([]);
+    setBulkStatus("");
+    setToastMessage("Selected order statuses updated");
+  },
+
+  onError: (error) => {
+    console.error("Bulk status update failed:", error);
+    setToastMessage("Failed to update selected order statuses");
+  },
+});
+
+const handleDelete = (id: string) => {
+  deleteOrderMutation.mutate(id);
+};
 
   const [sortField, setSortField] = useState<"orderId" | "customer" | "date" | "amount" | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -260,9 +325,10 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
   };
 
   const toggleOrder = (id: string) => {
-    setSelectedOrderIds((previous) => previous.includes(id)
-      ? previous.filter((selectedId) => selectedId !== id)
-      : [...previous, id],
+    setSelectedOrderIds((previous) =>
+      previous.includes(id)
+        ? previous.filter((selectedId) => selectedId !== id)
+        : [...previous, id],
     );
   };
 
@@ -277,13 +343,11 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
 
   const updateSelectedStatuses = () => {
     if (!bulkStatus || selectedOrderIds.length === 0) return;
-    setOrders((previous) => previous.map((order) => selectedOrderIds.includes(order.id)
-      ? { ...order, orderStatus: bulkStatus }
-      : order,
-    ));
-    setSelectedOrderIds([]);
-    setBulkStatus("");
-    setToastMessage("Selected order statuses updated");
+
+    updateSelectedStatusesMutation.mutate({
+      ids: selectedOrderIds,
+      status: bulkStatus,
+    });
   };
 
   const handleBulkStatusChange = (value: string) => {
@@ -294,12 +358,21 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
     }
   };
 
+  // Confirm and delete selected orders
   const deleteSelectedOrders = () => {
     if (selectedOrderIds.length === 0) return;
-    if (!window.confirm(`Delete ${selectedOrderIds.length} selected order${selectedOrderIds.length === 1 ? "" : "s"}?`)) return;
-    setOrders((previous) => previous.filter((order) => !selectedOrderIds.includes(order.id)));
-    setSelectedOrderIds([]);
-    setToastMessage("Selected orders deleted");
+
+    if (
+      !window.confirm(
+        `Delete ${selectedOrderIds.length} selected order${
+          selectedOrderIds.length === 1 ? "" : "s"
+        }?`,
+      )
+    ) {
+      return;
+    }
+
+    deleteSelectedOrdersMutation.mutate(selectedOrderIds);
   };
 
   const orderChips = [
@@ -467,7 +540,7 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
                   <TableCell className="px-4 py-3 text-sm">{order.customer}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-muted-foreground">{order.product}</TableCell>
                   <TableCell className="whitespace-nowrap px-4 py-3 font-medium text-sm">
-                    {order.amount.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                    {formatINR(order.amount)}
                   </TableCell>
                   <TableCell className="px-4 py-3"><StatusPill status={order.paymentStatus} /></TableCell>
                   <TableCell className="px-4 py-3"><StatusPill status={order.orderStatus} /></TableCell>
@@ -517,8 +590,10 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
         </form>
       </FormDrawer>
       <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
-    </AdminPage>
-  );
+       </AdminPage>
+);
+
 }
+
 
 export default Orders;

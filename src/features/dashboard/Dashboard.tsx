@@ -15,6 +15,7 @@ import type { Order } from "@/features/order/types";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatINR } from "@/lib/utils";
 
 type DashboardProps = {
   onNavigate: (page: string) => void;
@@ -50,11 +51,14 @@ function Dashboard({
     const date = new Date(chartStart.getFullYear(), chartStart.getMonth(), chartStart.getDate() + index);
     return localDateKey(date);
   });
-  const chartValues = chartKeys.map((date) => ({
-    date,
-    sales: orders.filter((order) => order.date === date).reduce((total, order) => total + order.amount, 0),
-    count: orders.filter((order) => order.date === date).length,
-  }));
+  const chartValues = chartKeys.map((date) => {
+    const dayOrders = orders.filter((order) => order.date === date);
+    return {
+      date,
+      sales: dayOrders.reduce((total, order) => total + order.amount, 0),
+      count: dayOrders.length,
+    };
+  });
   const rangeOrders = orders.filter((order) => order.date >= chartKeys[0] && order.date <= chartKeys[chartKeys.length - 1]);
   const rangeSales = rangeOrders.reduce((total, order) => total + order.amount, 0);
   const maxSales = Math.max(...chartValues.map(({ sales }) => sales), 0);
@@ -81,7 +85,7 @@ function Dashboard({
     },
     {
       label: "Total payments",
-      value: totalPayments.toLocaleString("en-IN", { style: "currency", currency: "INR" }),
+      value: formatINR(totalPayments),
       page: "payments",
       icon: CreditCard,
       color: "var(--nav-payments)",
@@ -175,7 +179,7 @@ function Dashboard({
         <div className="analytics-summary">
           <div>
             <span>Gross revenue</span>
-            <strong>{rangeSales.toLocaleString("en-IN", { style: "currency", currency: "INR" })}</strong>
+            <strong>{formatINR(rangeSales)}</strong>
           </div>
           <div>
             <span>Orders booked</span>
@@ -185,7 +189,7 @@ function Dashboard({
             <span>Avg. order value</span>
             <strong>
               {rangeOrders.length > 0
-                ? (rangeSales / rangeOrders.length).toLocaleString("en-IN", { style: "currency", currency: "INR" })
+                ? formatINR(rangeSales / rangeOrders.length)
                 : "₹0"}
             </strong>
           </div>
@@ -205,11 +209,11 @@ function Dashboard({
                   key={date}
                   onMouseEnter={() => setHoveredBarIndex(index)}
                   onMouseLeave={() => setHoveredBarIndex(null)}
-                  aria-label={`${dayLabel}: ${sales.toLocaleString("en-IN", { style: "currency", currency: "INR" })}, ${count} orders`}
+                  aria-label={`${dayLabel}: ${formatINR(sales)}, ${count} orders`}
                 >
                   {isHovered && (
                     <div className="sales-bar-tooltip">
-                      <strong className="text-xs font-semibold">{sales.toLocaleString("en-IN", { style: "currency", currency: "INR" })}</strong>
+                      <strong className="text-xs font-semibold">{formatINR(sales)}</strong>
                       <span className="text-[10px] text-muted-foreground">{count} order{count === 1 ? "" : "s"} · {dayLabel}</span>
                     </div>
                   )}
@@ -269,7 +273,7 @@ function Dashboard({
                   </TableCell>
                   <TableCell className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{order.date}</TableCell>
                   <TableCell className="whitespace-nowrap px-4 py-3 text-right font-medium text-sm">
-                    {order.amount.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                    {formatINR(order.amount)}
                   </TableCell>
                 </TableRow>
               ))}

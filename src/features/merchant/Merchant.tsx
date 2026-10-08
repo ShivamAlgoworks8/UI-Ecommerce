@@ -37,12 +37,14 @@ import {
 } from "@/components/ui/table";
 
 import Pagination from "@/components/common/Pagination";
+import type { CreateRequest } from "@/app/types";
+import { API_BASE_URL } from "@/lib/api";
 
 type MerchantProps = {
   merchants: MerchantData[];
   setMerchants: Dispatch<SetStateAction<MerchantData[]>>;
   searchTerm: string;
-  createRequest: { page: string; id: number } | null;
+  createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
 };
 
@@ -123,7 +125,7 @@ function Merchant({
     const fetchMerchants = async () => {
       try {
         const response = await fetch(
-          "http://localhost:8080/api/merchants"
+          `${API_BASE_URL}/api/merchants`
         );
 
         if (!response.ok) {
@@ -177,7 +179,7 @@ function Merchant({
     if (isEditMode && editingMerchantId !== null) {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/merchants/${editingMerchantId}`,
+          `${API_BASE_URL}/api/merchants/${editingMerchantId}`,
           {
             method: "PUT",
             headers: jsonHeaders,
@@ -209,7 +211,7 @@ function Merchant({
       try {
         // Send the new merchant details to the Spring Boot backend.
         const response = await fetch(
-          "http://localhost:8080/api/merchants",
+          `${API_BASE_URL}/api/merchants`,
           {
             method: "POST",
             headers: jsonHeaders,
@@ -260,7 +262,7 @@ function Merchant({
     try {
       // Delete the merchant from the backend.
       const response = await fetch(
-        `http://localhost:8080/api/merchants/${merchantId}`,
+        `${API_BASE_URL}/api/merchants/${merchantId}`,
         {
           method: "DELETE",
         }

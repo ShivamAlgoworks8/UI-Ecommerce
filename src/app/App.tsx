@@ -16,14 +16,16 @@ import type { Notification } from "@/features/notification/types";
 import type { Order } from "@/features/order/types";
 import type { Payment } from "@/features/payment/types";
 import type { ProductData } from "@/features/product/types";
-import type { ThemeMode } from "@/app/types";
+import type { CreateRequest, ThemeMode } from "@/app/types";
+
+const DEFAULT_CATEGORIES = ["Electronics", "Clothing", "Grocery", "Home & Living"];
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [searchByPage, setSearchByPage] = useState<Record<string, string>>({});
   const searchTerm = searchByPage[currentPage] ?? "";
-  const [createRequest, setCreateRequest] = useState<{ page: string; id: number } | null>(null);
+  const [createRequest, setCreateRequest] = useState<CreateRequest | null>(null);
   const createRequestId = useRef(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -43,14 +45,14 @@ function App() {
   });
   const [categories, setCategories] = useState<string[]>(() => {
     const savedCategories = localStorage.getItem("nexora_categories");
-    if (!savedCategories) return ["Electronics", "Clothing", "Grocery", "Home & Living"];
+    if (!savedCategories) return DEFAULT_CATEGORIES;
     try {
       const parsed: unknown = JSON.parse(savedCategories);
       return Array.isArray(parsed) && parsed.every((category) => typeof category === "string")
         ? parsed
-        : ["Electronics", "Clothing", "Grocery", "Home & Living"];
+        : DEFAULT_CATEGORIES;
     } catch {
-      return ["Electronics", "Clothing", "Grocery", "Home & Living"];
+      return DEFAULT_CATEGORIES;
     }
   });
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {

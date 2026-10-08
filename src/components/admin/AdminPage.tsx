@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import PageHeader from "./PageHeader";
+import { PackageOpen } from "lucide-react";
 
 type AdminPageProps = {
   children: ReactNode;
@@ -12,15 +13,6 @@ type AdminPageHeaderProps = {
   description: string;
   action?: ReactNode;
 };
-
-type AdminPageCardProps = {
-  title: string;
-  description: string;
-  children: ReactNode;
-  className?: string;
-};
-
-import { PackageOpen } from "lucide-react";
 
 type EmptyStateProps = {
   title: string;
@@ -41,18 +33,6 @@ function AdminPageHeader({ title, description, action }: AdminPageHeaderProps) {
   return <PageHeader title={title} description={description} action={action} />;
 }
 
-function AdminPageCard({ title, description, children, className }: AdminPageCardProps) {
-  return (
-    <section className={cn("data-card", className)}>
-      <header className="data-card-header border-b border-border">
-        <h3 className="font-semibold">{title}</h3>
-        <p>{description}</p>
-      </header>
-      {children}
-    </section>
-  );
-}
-
 function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   return (
     <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center animate-in fade-in-50 duration-300">
@@ -66,4 +46,4 @@ function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   );
 }
 
-export { AdminPage, AdminPageCard, AdminPageHeader, EmptyState };
+export { AdminPage, AdminPageHeader, EmptyState };

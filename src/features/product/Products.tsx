@@ -22,6 +22,11 @@ import { Textarea } from "@/components/ui/textarea";
 import Pagination from "@/components/common/Pagination";
 import type { MerchantData } from "@/features/merchant/types";
 import type { ProductData } from "@/features/product/types";
+import type { CreateRequest } from "@/app/types";
+import { API_BASE_URL } from "@/lib/api";
+import { formatINR } from "@/lib/utils";
+
+const LOW_STOCK_THRESHOLD = 5;
 
 type ProductProps = {
   merchants: MerchantData[];
@@ -29,7 +34,7 @@ type ProductProps = {
   products: ProductData[];
   setProducts: Dispatch<SetStateAction<ProductData[]>>;
   searchTerm: string;
-  createRequest: { page: string; id: number } | null;
+  createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
 };
 
@@ -50,7 +55,7 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
   const [bulkStock, setBulkStock] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/products")
+    fetch(`${API_BASE_URL}/api/products`)
       .then((response) => {
         if (!response.ok) throw new Error("Failed to fetch products");
         return response.json();
@@ -141,7 +146,7 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     if (isEditMode && editingProductId !== null) {
   try {
     const response = await fetch(
-      `http://localhost:8080/api/products/${editingProductId}`,
+      `${API_BASE_URL}/api/products/${editingProductId}`,
       {
         method: "PUT",
         headers: {
@@ -194,7 +199,7 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
 }
 
     try {
-      const response = await fetch("http://localhost:8080/api/products", {
+      const response = await fetch(`${API_BASE_URL}/api/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -244,7 +249,7 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
 
   try {
     const response = await fetch(
-      `http://localhost:8080/api/products/${productId}`,
+      `${API_BASE_URL}/api/products/${productId}`,
       {
         method: "DELETE",
       },
@@ -335,9 +340,9 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
       || product.merchant.toLowerCase().includes(searchValue)
       || product.productType.toLowerCase().includes(searchValue);
     const matchesStatus = statusFilter === "All"
-      || (statusFilter === "Low stock" && product.stock > 0 && product.stock <= 5)
+      || (statusFilter === "Low stock" && product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD)
       || (statusFilter === "Out of stock" && product.stock <= 0)
-      || (statusFilter === "Available" && product.status === "Available" && product.stock > 5)
+      || (statusFilter === "Available" && product.status === "Available" && product.stock > LOW_STOCK_THRESHOLD)
       || (statusFilter === "NA" && product.status === "NA");
     return matchesSearch && matchesStatus;
   });
@@ -415,7 +420,7 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
         <article>
           <span>Low stock warning</span>
           <strong className="text-amber-600 dark:text-amber-400">
-            {products.filter((product) => product.stock > 0 && product.stock <= 5).length}
+            {products.filter((product) => product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD).length}
           </strong>
         </article>
         <article>
@@ -563,12 +568,12 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
                     <TableCell className="px-4 py-3 text-sm text-muted-foreground">{product.merchant || "-"}</TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-sm">{product.productName}</TableCell>
                     <TableCell className="whitespace-nowrap px-4 py-3 font-medium text-sm">
-                      {product.price.toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                      {formatINR(product.price)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-sm">{product.stock}</TableCell>
                     <TableCell className="px-4 py-3 text-sm">{product.productType}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <StatusPill status={product.stock <= 0 ? "Out of stock" : product.stock <= 5 ? "Low stock" : product.status} />
+                      <StatusPill status={product.stock <= 0 ? "Out of stock" : product.stock <= LOW_STOCK_THRESHOLD ? "Low stock" : product.status} />
                     </TableCell>
                     <TableCell className="max-w-40 truncate px-4 py-3 text-xs text-muted-foreground">{product.image || "No image"}</TableCell>
                     <TableCell className="px-4 py-3">

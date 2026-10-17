@@ -1,0 +1,6 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Stylized U-shape (Light Blue) -->
+  <path d="M7 8V18C7 22.9706 11.0294 27 16 27C20.9706 27 25 22.9706 25 18V8" stroke="#5DBCF9" stroke-width="5" stroke-linecap="round"/>
+  <!-- Gold Accent Star (matching your new reference) -->
+  <path d="M22 6.5L23.5 4L25 6.5L27.5 8L25 9.5L23.5 12L22 9.5L19.5 8L22 6.5Z" fill="#C5A037"/>
+</svg>

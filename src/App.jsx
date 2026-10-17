@@ -42,6 +42,7 @@ export default function App() {
    */
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   /**
    * addToCart — Adds a product to the cart.
@@ -94,6 +95,11 @@ export default function App() {
         ? prevWishlist.filter((item) => item.id !== product.id)
         : [...prevWishlist, product];
     });
+    setWishlist((prevWishlist) =>
+      prevWishlist.some((item) => item.id === product.id)
+        ? prevWishlist.filter((item) => item.id !== product.id)
+        : [...prevWishlist, product]
+    );
   };
 
   // Total number of items in cart (sum of quantities)
@@ -106,6 +112,12 @@ export default function App() {
         <div className="min-h-screen flex flex-col">
           {/* ── Sticky Navbar ── */}
           <Navbar cartCount={cartCount} wishlistCount={wishlist.length} />
+          <Navbar
+            cartCount={cartCount}
+            wishlistCount={wishlist.length}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
 
           {/* ── Page Content (grows to fill remaining space) ── */}
           <main className="flex-grow">
@@ -127,6 +139,8 @@ export default function App() {
                     onAddToCart={addToCart}
                     wishlist={wishlist}
                     onToggleWishlist={toggleWishlist}
+                    searchQuery={searchQuery}
+                    onClearSearch={() => setSearchQuery("")}
                   />
                 }
               />

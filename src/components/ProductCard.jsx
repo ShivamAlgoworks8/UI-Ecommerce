@@ -16,6 +16,8 @@ export default function ProductCard({
 }) {
     const isWishlisted = wishlist.some((item) => item.id === product.id);
 
+export default function ProductCard({ product, onAddToCart, wishlist = [], onToggleWishlist, animationDelay = "" }) {
+    const isWishlisted = wishlist.some((item) => item.id === product.id);
     return (
         <div
             className={`group bg-white rounded-xl overflow-hidden border border-border-light hover:shadow-lg hover:-translate-y-1 transition-all duration-300 animate-fade-in-up ${animationDelay}`}
@@ -42,6 +44,7 @@ export default function ProductCard({
                             aria-label={isWishlisted ? `Remove ${product.title} from wishlist` : `Add ${product.title} to wishlist`}
                             aria-pressed={isWishlisted}
                             className={`absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm text-lg transition-all duration-200 hover:scale-110 cursor-pointer ${isWishlisted ? "text-accent" : "text-text-secondary"}`}
+                            className={`absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 text-lg transition-all duration-200 hover:scale-110 cursor-pointer ${isWishlisted ? "text-accent" : "text-text-secondary"}`}
                         >
                             {isWishlisted ? "♥" : "♡"}
                         </button>

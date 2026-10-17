@@ -8,21 +8,8 @@
  * Exposes: user, login, signup, logout, isAuthenticated
  */
 
-import { createContext, useState, useContext } from "react";
-
-const AuthContext = createContext(null);
-
-/**
- * Custom hook to consume auth context.
- * Usage: const { user, login, logout } = useAuth();
- */
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
-    return context;
-}
+import { useState } from "react";
+import { AuthContext } from "./contextValue";
 
 /**
  * AuthProvider — wraps the app and provides auth state.

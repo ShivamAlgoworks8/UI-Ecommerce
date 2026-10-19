@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { API_BASE_URL } from "@/lib/api";
 import Login from "@/pages/auth/Login/Login";
 import AdminHeader from "@/components/admin/AdminHeader";
 import Sidebar from "@/components/admin/Sidebar";
@@ -29,20 +30,45 @@ function App() {
   const createRequestId = useRef(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  useEffect(() => {
+  const fetchPayments = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch payments");
+      }
+
+      const data: Payment[] = await response.json();
+      setPayments(data);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+    }
+  };
+
+  fetchPayments();
+}, []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [products, setProducts] = useState<ProductData[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const savedCustomers = localStorage.getItem("nexora_customers");
-    if (!savedCustomers) return [];
-    try {
-      const parsed: unknown = JSON.parse(savedCustomers);
-      return Array.isArray(parsed) && parsed.every((item) =>
-        typeof item.id === "number" && typeof item.name === "string",
-      ) ? parsed as Customer[] : [];
-    } catch {
-      return [];
-    }
-  });
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/customers`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch customers: ${response.status}`);
+        }
+
+        const data: Customer[] = await response.json();
+        setCustomers(data);
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
   const [categories, setCategories] = useState<string[]>(() => {
     const savedCategories = localStorage.getItem("nexora_categories");
     if (!savedCategories) return DEFAULT_CATEGORIES;
@@ -80,10 +106,6 @@ function App() {
       JSON.stringify(merchants)
     );
   }, [merchants]);
-
-  useEffect(() => {
-    localStorage.setItem("nexora_customers", JSON.stringify(customers));
-  }, [customers]);
 
   useEffect(() => {
     localStorage.setItem("nexora_categories", JSON.stringify(categories));
@@ -161,7 +183,7 @@ function App() {
               orders={orders}
               orderCount={orders.length}
               productCount={products.length}
-              totalPayments={payments.reduce((total, payment) => total + payment.amount, 0)}
+              totalPayments={payments.reduce((total, payment) => total + payment.paymentAmount, 0)}
               notificationCount={notifications.length}
             />
           </section>
@@ -223,9 +245,7 @@ function App() {
               customers={customers}
               setCustomers={setCustomers}
               orders={orders}
-              setOrders={setOrders}
               payments={payments}
-              setPayments={setPayments}
               searchTerm={searchByPage.customers ?? ""}
             />
           </section>

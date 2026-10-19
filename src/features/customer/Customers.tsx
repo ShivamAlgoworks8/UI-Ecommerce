@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { API_BASE_URL } from "@/lib/api";
 import type { Customer } from "@/features/customer/types";
 import type { Order } from "@/features/order/types";
 import type { Payment } from "@/features/payment/types";
@@ -17,9 +18,7 @@ type CustomersProps = {
   customers: Customer[];
   setCustomers: Dispatch<SetStateAction<Customer[]>>;
   orders: Order[];
-  setOrders: Dispatch<SetStateAction<Order[]>>;
   payments: Payment[];
-  setPayments: Dispatch<SetStateAction<Payment[]>>;
   searchTerm: string;
 };
 
@@ -30,87 +29,138 @@ type CustomerRow = {
   paymentCount: number;
 };
 
-function Customers({ customers, setCustomers, orders, setOrders, payments, setPayments, searchTerm }: CustomersProps) {
+function Customers({ customers, setCustomers, orders, payments, searchTerm }: CustomersProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [editingOriginalName, setEditingOriginalName] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const closeDrawer = () => {
     setIsDrawerOpen(false);
     setEditingCustomer(null);
-    setEditingOriginalName(null);
     setName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
   };
 
   const openAddDrawer = () => {
     setEditingCustomer(null);
     setName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
     setIsDrawerOpen(true);
   };
 
   const openEditDrawer = (customer: Customer) => {
     setEditingCustomer(customer);
-    setEditingOriginalName(customer.name);
     setName(customer.name);
+    setEmail(customer.email);
+    setPhone(customer.phone);
+    setAddress(customer.address);
     setIsDrawerOpen(true);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     const normalizedName = name.trim();
     if (!normalizedName) return;
-    if ([...orders.map((order) => order.customer), ...payments.map((payment) => payment.customer)]
-      .some((customerName) => customerName.toLowerCase() === normalizedName.toLowerCase()
-        && customerName !== editingOriginalName)) {
+
+    const normalizedEmail = email.trim();
+    const normalizedPhone = phone.trim();
+
+    const emailPattern =
+      /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
+    const phonePattern = /^[6-9]\d{9}$/;
+
+    if (!emailPattern.test(normalizedEmail)) {
+      setToastMessage("Please enter a valid email address");
+      return;
+    }
+
+    if (!phonePattern.test(normalizedPhone)) {
+      setToastMessage("Enter a valid 10-digit Indian mobile number");
+      return;
+    }
+
+    const duplicate = customers.some(
+      (customer) =>
+        customer.name.toLowerCase() === normalizedName.toLowerCase() &&
+        customer.id !== editingCustomer?.id,
+    );
+
+    if (duplicate) {
       setToastMessage("A customer with that name already exists");
       return;
     }
-    if (editingCustomer) {
-      if (editingCustomer.id === 0) {
-        setCustomers((previous) => [...previous, { id: Date.now(), name: normalizedName }]);
-      } else {
-        setCustomers((previous) => previous.map((customer) =>
-          customer.id === editingCustomer.id ? { ...customer, name: normalizedName } : customer,
-        ));
+
+    try {
+      const payload = {
+        name: normalizedName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        address: address.trim(),
+      };
+
+      const response = await fetch(
+        editingCustomer
+          ? `${API_BASE_URL}/api/customers/${editingCustomer.id}`
+          : `${API_BASE_URL}/api/customers`,
+        {
+          method: editingCustomer ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Customer request failed: ${response.status}`);
       }
-      if (editingOriginalName) {
-        setOrders((previous) => previous.map((order) => order.customer === editingOriginalName
-          ? { ...order, customer: normalizedName }
-          : order,
-        ));
-        setPayments((previous) => previous.map((payment) => payment.customer === editingOriginalName
-          ? { ...payment, customer: normalizedName }
-          : payment,
-        ));
-      }
-    } else {
-      setCustomers((previous) => [...previous, { id: Date.now(), name: normalizedName }]);
+
+      const savedCustomer: Customer = await response.json();
+
+      setCustomers((previous) =>
+        editingCustomer
+          ? previous.map((customer) =>
+              customer.id === savedCustomer.id ? savedCustomer : customer,
+            )
+          : [...previous, savedCustomer],
+      );
+
+      closeDrawer();
+      setToastMessage(
+        editingCustomer ? "Customer updated successfully" : "Customer added successfully",
+      );
+    } catch (error) {
+      console.error("Customer save error:", error);
+      setToastMessage("Could not save customer. Please try again.");
     }
-    setToastMessage(editingCustomer ? "Customer updated" : "Customer added");
-    closeDrawer();
   };
 
   const observedNames = [...new Set([
     ...orders.map((order) => order.customer),
-    ...payments.map((payment) => payment.customer),
+    ...payments.map((payment) => payment.customerName),
   ].filter(Boolean))];
   const customerRows: CustomerRow[] = [
     ...customers.map((customer) => ({
       key: `saved-${customer.id}`,
       customer,
       orderCount: orders.filter((order) => order.customer === customer.name).length,
-      paymentCount: payments.filter((payment) => payment.customer === customer.name).length,
+      paymentCount: payments.filter((payment) => payment.customerName === customer.name).length,
     })),
     ...observedNames
       .filter((customerName) => !customers.some((customer) => customer.name === customerName))
       .map((customerName) => ({
         key: `observed-${customerName}`,
-        customer: { id: 0, name: customerName },
+        customer: { id: "", name: customerName, email: "", phone: "", address: "" },
         orderCount: orders.filter((order) => order.customer === customerName).length,
-        paymentCount: payments.filter((payment) => payment.customer === customerName).length,
+        paymentCount: payments.filter((payment) => payment.customerName === customerName).length,
       })),
   ];
   const filteredCustomers = customerRows.filter(({ customer }) =>
@@ -124,18 +174,52 @@ function Customers({ customers, setCustomers, orders, setOrders, payments, setPa
     );
   };
 
-  const deleteSelected = () => {
-    const selected = customerRows.filter((row) => selectedKeys.includes(row.key));
+  const deleteSelected = async () => {
+    const selected = customerRows.filter((row) =>
+      selectedKeys.includes(row.key),
+    );
+
     if (selected.length === 0) return;
+
     if (selected.some((row) => row.orderCount > 0 || row.paymentCount > 0)) {
       setToastMessage("Customers with orders or payments cannot be deleted");
       return;
     }
-    if (!window.confirm(`Delete ${selected.length} selected customer${selected.length === 1 ? "" : "s"}?`)) return;
-    const selectedIds = selected.map((row) => row.customer.id);
-    setCustomers((previous) => previous.filter((customer) => !selectedIds.includes(customer.id)));
-    setSelectedKeys([]);
-    setToastMessage("Selected customers deleted");
+
+    const savedCustomers = selected.filter((row) => row.customer.id);
+
+    if (savedCustomers.length === 0) {
+      setToastMessage("Only saved customers can be deleted");
+      return;
+    }
+
+    if (!window.confirm(`Delete ${savedCustomers.length} selected customer(s)?`)) {
+      return;
+    }
+
+    try {
+      for (const row of savedCustomers) {
+        const response = await fetch(
+          `${API_BASE_URL}/api/customers/${row.customer.id}`,
+          { method: "DELETE" },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Delete failed: ${response.status}`);
+        }
+      }
+
+      const deletedIds = savedCustomers.map((row) => row.customer.id);
+
+      setCustomers((previous) =>
+        previous.filter((customer) => !deletedIds.includes(customer.id)),
+      );
+      setSelectedKeys([]);
+      setToastMessage("Selected customers deleted");
+    } catch (error) {
+      console.error("Customer delete error:", error);
+      setToastMessage("Could not delete all customers. Refresh and verify the list.");
+    }
   };
 
   return (
@@ -190,18 +274,51 @@ function Customers({ customers, setCustomers, orders, setOrders, payments, setPa
                   <TableCell className="px-[18px] py-3">{paymentCount}</TableCell>
                   <TableCell className="px-[18px] py-3">
                     <div className="flex justify-end gap-4">
-                      <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => openEditDrawer(customer)}>Edit</button>
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline"
+                        onClick={() => openEditDrawer(customer)}
+                        disabled={!customer.id}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="text-sm font-medium text-destructive hover:underline"
-                        onClick={() => {
+                        onClick={async () => {
                           if (orderCount > 0 || paymentCount > 0) {
                             setToastMessage("Customers with orders or payments cannot be deleted");
                             return;
                           }
+
+                          if (!customer.id) {
+                            setToastMessage("This customer is not saved in the backend");
+                            return;
+                          }
+
                           if (!window.confirm(`Delete ${customer.name}?`)) return;
-                          setCustomers((previous) => previous.filter((item) => item.id !== customer.id));
-                          setSelectedKeys((previous) => previous.filter((selectedKey) => selectedKey !== key));
+
+                          try {
+                            const response = await fetch(
+                              `${API_BASE_URL}/api/customers/${customer.id}`,
+                              { method: "DELETE" },
+                            );
+
+                            if (!response.ok) {
+                              throw new Error(`Delete failed: ${response.status}`);
+                            }
+
+                            setCustomers((previous) =>
+                              previous.filter((item) => item.id !== customer.id),
+                            );
+                            setSelectedKeys((previous) =>
+                              previous.filter((selectedKey) => selectedKey !== key),
+                            );
+                            setToastMessage("Customer deleted successfully");
+                          } catch (error) {
+                            console.error("Customer delete error:", error);
+                            setToastMessage("Could not delete customer");
+                          }
                         }}
                       >
                         Delete
@@ -226,6 +343,39 @@ function Customers({ customers, setCustomers, orders, setOrders, payments, setPa
           <div className="grid gap-2">
             <Label htmlFor="customer-name">Customer name</Label>
             <Input id="customer-name" value={name} onChange={(event) => setName(event.target.value)} required />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="customer-email">Email</Label>
+            <Input
+              id="customer-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="example@gmail.com"
+              required
+              maxLength={254}
+              title="Please enter a valid email address, e.g. example@gmail.com"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="customer-phone">Phone</Label>
+            <Input
+              id="customer-phone"
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="9876543210"
+              required
+              inputMode="numeric"
+              maxLength={10}
+              minLength={10}
+              pattern="[6-9][0-9]{9}"
+              title="Enter a valid 10-digit Indian mobile number starting with 6, 7, 8 or 9"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="customer-address">Address</Label>
+            <Input id="customer-address" value={address} onChange={(event) => setAddress(event.target.value)} />
           </div>
         </form>
       </FormDrawer>

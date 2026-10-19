@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { Notification } from "@/features/notification/types";
 import type { CreateRequest } from "@/app/types";
+import { API_BASE_URL } from "@/lib/api";
 
 type NotificationsProps = {
   notifications: Notification[];
@@ -32,6 +33,52 @@ function Notifications({ notifications, setNotifications, searchTerm, createRequ
   const [status, setStatus] = useState<Notification["status"]>("Active");
   const [date, setDate] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/notifications`,
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch notifications");
+        }
+
+        const data: Array<{
+          id: string;
+          title: string;
+          message: string;
+          type: Notification["type"];
+          status?: Notification["status"];
+          date?: string;
+          read?: boolean;
+          createdAt?: string;
+        }> = await response.json();
+
+        setNotifications(
+          data.map((item) => ({
+            id: item.id,
+            title: item.title,
+            message: item.message,
+            type: item.type,
+            status: item.status ?? "Active",
+            date:
+              item.date ??
+              item.createdAt?.slice(0, 10) ??
+              new Date().toISOString().slice(0, 10),
+            read: item.read ?? false,
+            createdAt: item.createdAt,
+          })),
+        );
+      } catch (error) {
+        console.error("Notification fetch failed:", error);
+        setToastMessage("Failed to load notifications");
+      }
+    };
+
+    void fetchNotifications();
+  }, [setNotifications]);
 
   const resetForm = () => {
     setTitle("");
@@ -70,43 +117,107 @@ function Notifications({ notifications, setNotifications, searchTerm, createRequ
     resetForm();
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!title.trim() || !message.trim() || !date) {
       return;
     }
 
-    const wasEditing = Boolean(editingNotification);
-    if (editingNotification) {
-      setNotifications((previousNotifications) =>
-        previousNotifications.map((notification) =>
-          notification.id === editingNotification.id
-            ? { ...notification, title: title.trim(), message: message.trim(), type, status, date }
-            : notification,
-        ),
+    const payload = {
+      title: title.trim(),
+      message: message.trim(),
+      type,
+      status,
+      date,
+    };
+
+    try {
+      const wasEditing = Boolean(editingNotification);
+      const response = await fetch(
+        editingNotification
+          ? `${API_BASE_URL}/api/notifications/${editingNotification.id}`
+          : `${API_BASE_URL}/api/notifications`,
+        {
+          method: wasEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
       );
-    } else {
-      const newNotification: Notification = {
-        id: Date.now(),
-        title: title.trim(),
-        message: message.trim(),
-        type,
-        status,
-        date,
+
+      if (!response.ok) {
+        throw new Error("Failed to save notification");
+      }
+
+      const saved: {
+        id: string;
+        title: string;
+        message: string;
+        type: Notification["type"];
+        status?: Notification["status"];
+        date?: string;
+        read?: boolean;
+        createdAt?: string;
+      } = await response.json();
+
+      const savedNotification: Notification = {
+        id: saved.id,
+        title: saved.title,
+        message: saved.message,
+        type: saved.type,
+        status: saved.status ?? "Active",
+        date:
+          saved.date ??
+          saved.createdAt?.slice(0, 10) ??
+          date,
+        read: saved.read ?? false,
+        createdAt: saved.createdAt,
       };
 
-      setNotifications((previousNotifications) => [...previousNotifications, newNotification]);
-    }
+      setNotifications((previous) =>
+        wasEditing
+          ? previous.map((item) =>
+              item.id === savedNotification.id
+                ? savedNotification
+                : item,
+            )
+          : [...previous, savedNotification],
+      );
 
-    closeModal();
-    setToastMessage(wasEditing ? "Notification updated successfully" : "Notification added successfully");
+      closeModal();
+      setToastMessage(
+        wasEditing
+          ? "Notification updated successfully"
+          : "Notification added successfully",
+      );
+    } catch (error) {
+      console.error("Notification save failed:", error);
+      setToastMessage("Failed to save notification");
+    }
   };
 
-  const handleDelete = (id: number) => {
-    setNotifications((previousNotifications) =>
-      previousNotifications.filter((notification) => notification.id !== id),
-    );
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/notifications/${id}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete notification");
+      }
+
+      setNotifications((previous) =>
+        previous.filter((item) => item.id !== id),
+      );
+
+      setToastMessage("Notification deleted successfully");
+    } catch (error) {
+      console.error("Notification delete failed:", error);
+      setToastMessage("Failed to delete notification");
+    }
   };
 
   const filteredNotifications = notifications.filter((notification) => [

@@ -1,8 +1,10 @@
 export type Notification = {
-  id: number;
+  id: string;
   title: string;
   message: string;
   type: "Info" | "Success" | "Warning" | "Alert";
   status: "Active" | "Inactive";
   date: string;
+  read?: boolean;
+  createdAt?: string;
 };

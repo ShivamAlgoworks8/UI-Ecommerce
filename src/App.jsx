@@ -27,6 +27,7 @@ import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
+import WishlistPage from "./pages/WishlistPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 
@@ -40,6 +41,8 @@ export default function App() {
    * Example cart item: { id, title, price, image, category, quantity }
    */
   const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   /**
    * addToCart — Adds a product to the cart.
@@ -85,6 +88,20 @@ export default function App() {
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
 
+  const toggleWishlist = (product) => {
+    setWishlist((prevWishlist) => {
+      const isWishlisted = prevWishlist.some((item) => item.id === product.id);
+      return isWishlisted
+        ? prevWishlist.filter((item) => item.id !== product.id)
+        : [...prevWishlist, product];
+    });
+    setWishlist((prevWishlist) =>
+      prevWishlist.some((item) => item.id === product.id)
+        ? prevWishlist.filter((item) => item.id !== product.id)
+        : [...prevWishlist, product]
+    );
+  };
+
   // Total number of items in cart (sum of quantities)
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -94,18 +111,38 @@ export default function App() {
         <ScrollToTop />
         <div className="min-h-screen flex flex-col">
           {/* ── Sticky Navbar ── */}
-          <Navbar cartCount={cartCount} />
+          <Navbar cartCount={cartCount} wishlistCount={wishlist.length} />
+          <Navbar
+            cartCount={cartCount}
+            wishlistCount={wishlist.length}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
 
           {/* ── Page Content (grows to fill remaining space) ── */}
           <main className="flex-grow">
             <Routes>
               <Route
                 path="/"
-                element={<HomePage onAddToCart={addToCart} />}
+                element={
+                  <HomePage
+                    onAddToCart={addToCart}
+                    wishlist={wishlist}
+                    onToggleWishlist={toggleWishlist}
+                  />
+                }
               />
               <Route
                 path="/products"
-                element={<ProductsPage onAddToCart={addToCart} />}
+                element={
+                  <ProductsPage
+                    onAddToCart={addToCart}
+                    wishlist={wishlist}
+                    onToggleWishlist={toggleWishlist}
+                    searchQuery={searchQuery}
+                    onClearSearch={() => setSearchQuery("")}
+                  />
+                }
               />
               <Route
                 path="/product/:id"
@@ -118,6 +155,16 @@ export default function App() {
                     cart={cart}
                     onUpdateQuantity={updateQuantity}
                     onRemoveFromCart={removeFromCart}
+                  />
+                }
+              />
+              <Route
+                path="/wishlist"
+                element={
+                  <WishlistPage
+                    wishlist={wishlist}
+                    onAddToCart={addToCart}
+                    onToggleWishlist={toggleWishlist}
                   />
                 }
               />

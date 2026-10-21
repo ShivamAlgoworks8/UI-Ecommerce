@@ -1,81 +1,172 @@
 /**
- * HomePage
- * ────────
- * Premium half-bleed layout:
- *  1. Hero — left text constrained, right image full-bleed
- *  2. Featured products — full-width grid
- *  3. Promo banner — wide, no max-w
- *  4. Trust badges — full-width strip
+ * HomePage — Redesigned (Urbanova 2026)
+ * ───────────────────────────────────────
+ * 1. Hero — split layout with left text + right full-bleed image + carousel dots
+ * 2. Featured Products — 4-column grid with product cards
+ * 3. Promo Banner — bold CTA section
+ * 4. Trust Badges — 4-column icon strip (matches mockup footer section)
  */
 
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import ProductCard from "../components/ProductCard";
 import products from "../data/products";
 
+const heroSlides = [
+    {
+        label: "New Season",
+        heading: "Everyday",
+        headingAccent: "Essentials",
+        subtext: "Premium bags, watches, electronics and more designed for your modern lifestyle.",
+        ctaText: "Shop Now",
+        ctaLink: "/products",
+        image: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=900&h=600&fit=crop",
+        imageAlt: "Collection of everyday essentials",
+    },
+    {
+        label: "New Arrivals",
+        heading: "Premium",
+        headingAccent: "Collection",
+        subtext: "Curated accessories and electronics crafted for the modern lifestyle.",
+        ctaText: "Explore Now",
+        ctaLink: "/products",
+        image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&h=600&fit=crop",
+        imageAlt: "Premium watch collection",
+    },
+    {
+        label: "Exclusive Deals",
+        heading: "Up to 40%",
+        headingAccent: "Off Today",
+        subtext: "Grab the best deals on top-rated products before they sell out.",
+        ctaText: "View Deals",
+        ctaLink: "/products",
+        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&h=600&fit=crop",
+        imageAlt: "Deal on premium headphones",
+    },
+];
+
+const trustBadges = [
+    {
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+        ),
+        title: "Free Shipping",
+        desc: "On orders above ₹999",
+    },
+    {
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        ),
+        title: "Easy Returns",
+        desc: "Hassle-free returns",
+    },
+    {
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+        ),
+        title: "Secure Payment",
+        desc: "100% safe & secure",
+    },
+    {
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+        ),
+        title: "24/7 Support",
+        desc: "We're here to help",
+    },
+];
+
 export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
     const featuredProducts = products.slice(0, 4);
+    const [activeSlide, setActiveSlide] = useState(0);
+    const currentSlide = heroSlides[activeSlide];
 
     return (
         <div>
             {/* ═══════════════════════════════════════════
-          HERO — Half-Bleed Layout
+          HERO — Split Layout with Slider
           ═══════════════════════════════════════════ */}
             <section className="w-full relative overflow-hidden bg-surface-soft border-b border-border-light">
-                <div className="absolute top-0 left-0 w-72 h-72 bg-accent/5 rounded-full blur-3xl -translate-y-1/3 -translate-x-1/3" />
+                <div className="grid lg:grid-cols-2 items-stretch min-h-[360px] lg:min-h-[440px]">
 
-                <div className="grid lg:grid-cols-2 items-center">
                     {/* ── Left: Text Content ── */}
-                    <div className="max-w-2xl mx-auto px-6 py-16 lg:py-20 animate-fade-in-up">
-                        <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-accent mb-3 px-3 py-1 bg-accent/10 rounded-full">
-                            New Collection 2026
+                    <div className="flex flex-col justify-center px-8 py-14 lg:py-16 lg:px-14 xl:px-20 animate-fade-in-up">
+                        {/* Label */}
+                        <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-text-secondary mb-4">
+                            {currentSlide.label}
                         </span>
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-[1.1] tracking-tight text-primary mb-5">
-                            Discover Your
+
+                        {/* Heading */}
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.08] tracking-tight text-primary mb-4">
+                            {currentSlide.heading}
                             <br />
-                            <span className="text-accent">Perfect Style</span>
+                            <span className="text-primary">{currentSlide.headingAccent}</span>
                         </h1>
-                        <p className="text-base lg:text-lg text-text-secondary max-w-md mb-8 leading-relaxed">
-                            Curated essentials for modern living. Explore our handpicked
-                            collection of premium products designed to elevate your everyday.
+
+                        {/* Subtext */}
+                        <p className="text-sm lg:text-base text-text-secondary max-w-sm mb-8 leading-relaxed">
+                            {currentSlide.subtext}
                         </p>
-                        <div className="flex flex-wrap gap-3">
+
+                        {/* CTA Button */}
+                        <div>
                             <Link
-                                to="/products"
-                                className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover transition-all duration-300 hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98]"
+                                id="hero-shop-now-btn"
+                                to={currentSlide.ctaLink}
+                                className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent-hover transition-all duration-300 hover:shadow-lg hover:shadow-accent/30 active:scale-[0.98]"
                             >
-                                Shop Collection
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                {currentSlide.ctaText}
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                 </svg>
                             </Link>
-                            <Link
-                                to="/products"
-                                className="inline-flex items-center px-7 py-3.5 border-2 border-primary/15 text-primary text-sm font-semibold rounded-lg hover:border-primary/30 hover:bg-primary/5 transition-all duration-300"
-                            >
-                                Browse All
-                            </Link>
+                        </div>
+
+                        {/* Slider Dots */}
+                        <div className="flex items-center gap-2 mt-10">
+                            {heroSlides.map((_, i) => (
+                                <button
+                                    key={i}
+                                    id={`hero-dot-${i}`}
+                                    onClick={() => setActiveSlide(i)}
+                                    className={`slider-dot ${i === activeSlide ? "active" : ""}`}
+                                    aria-label={`Go to slide ${i + 1}`}
+                                />
+                            ))}
                         </div>
                     </div>
 
-                    {/* ── Right: Full-Bleed Image ── */}
-                    <div className="w-full animate-fade-in-up delay-200">
+                    {/* ── Right: Hero Image ── */}
+                    <div className="relative overflow-hidden">
                         <img
-                            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=900&h=600&fit=crop"
-                            alt="Curated collection of modern essentials"
-                            className="w-full h-[300px] sm:h-[380px] lg:h-[450px] object-cover"
+                            src={currentSlide.image}
+                            alt={currentSlide.imageAlt}
+                            className="w-full h-full object-cover min-h-[260px] lg:min-h-0 transition-opacity duration-500"
+                            style={{ aspectRatio: "auto" }}
                         />
+                        {/* Subtle left gradient overlay */}
+                        <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-surface-soft to-transparent hidden lg:block" />
                     </div>
                 </div>
             </section>
 
             {/* ═══════════════════════════════════════════
-          FEATURED PRODUCTS — Full Width
+          FEATURED PRODUCTS
           ═══════════════════════════════════════════ */}
-            <section className="w-full bg-white py-16 lg:py-20 px-6">
+            <section className="w-full bg-white py-14 lg:py-18 px-6">
                 <div className="max-w-6xl mx-auto">
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-10">
+                    {/* Section Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-8">
                         <div>
-                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent mb-1 block">
+                            <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent mb-1 block">
                                 Handpicked for you
                             </span>
                             <h2 className="text-2xl lg:text-3xl font-bold text-primary tracking-tight">
@@ -84,6 +175,7 @@ export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
                         </div>
                         <Link
                             to="/products"
+                            id="featured-view-all-link"
                             className="mt-3 sm:mt-0 text-sm font-semibold text-accent hover:text-accent-hover transition-colors duration-200 flex items-center gap-1"
                         >
                             View All
@@ -93,7 +185,8 @@ export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                    {/* Product Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
                         {featuredProducts.map((product, index) => (
                             <ProductCard
                                 key={product.id}
@@ -111,70 +204,52 @@ export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
             {/* ═══════════════════════════════════════════
           PROMO BANNER
           ═══════════════════════════════════════════ */}
-            <section className="w-full bg-primary py-20 lg:py-24 text-center px-6">
-                <h2 className="text-2xl lg:text-4xl font-bold text-white mb-4 tracking-tight">
-                    Upgrade Your Everyday
-                </h2>
-                <p className="text-gray-400 max-w-lg mx-auto mb-8 leading-relaxed text-sm lg:text-base">
-                    Free shipping on orders over $100. Hassle-free returns within 30 days.
-                    Quality craftsmanship guaranteed.
-                </p>
-                <Link
-                    to="/products"
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover transition-all duration-300 hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98]"
-                >
-                    Start Shopping
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                </Link>
+            <section className="w-full bg-primary py-16 lg:py-20 text-center px-6 relative overflow-hidden">
+                {/* Decorative circles */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
+
+                <div className="relative">
+                    <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-accent mb-4 px-3 py-1 bg-accent/10 rounded-full">
+                        Special Offer
+                    </span>
+                    <h2 className="text-2xl lg:text-4xl font-bold text-white mb-4 tracking-tight">
+                        Upgrade Your Everyday
+                    </h2>
+                    <p className="text-gray-400 max-w-lg mx-auto mb-8 leading-relaxed text-sm lg:text-base">
+                        Free shipping on orders over ₹999. Hassle-free returns within 30 days.
+                        Quality craftsmanship guaranteed.
+                    </p>
+                    <Link
+                        to="/products"
+                        id="promo-shop-btn"
+                        className="inline-flex items-center gap-2 px-8 py-4 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent-hover transition-all duration-300 hover:shadow-lg hover:shadow-accent/30 active:scale-[0.98]"
+                    >
+                        Start Shopping
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </Link>
+                </div>
             </section>
 
             {/* ═══════════════════════════════════════════
-          TRUST BADGES
+          TRUST BADGES — 4 columns (matches mockup)
           ═══════════════════════════════════════════ */}
-            <section className="w-full bg-surface-soft border-t border-border-light py-12 lg:py-14 px-6">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                        {[
-                            {
-                                icon: (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                ),
-                                title: "Free Shipping",
-                                desc: "On all orders over $100",
-                            },
-                            {
-                                icon: (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
-                                ),
-                                title: "Secure Payments",
-                                desc: "SSL encrypted checkout",
-                            },
-                            {
-                                icon: (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                ),
-                                title: "Easy Returns",
-                                desc: "30-day return policy",
-                            },
-                        ].map((badge) => (
+            <section className="w-full bg-white border-t border-border-light py-10 lg:py-12 px-6">
+                <div className="max-w-5xl mx-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {trustBadges.map((badge) => (
                             <div
                                 key={badge.title}
-                                className="flex items-center gap-3 p-5 rounded-xl bg-white border border-border-light"
+                                className="flex flex-col items-center text-center gap-3 py-4"
                             >
-                                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                                <div className="trust-badge-icon">
                                     {badge.icon}
                                 </div>
                                 <div>
-                                    <h4 className="font-semibold text-primary text-sm">{badge.title}</h4>
-                                    <p className="text-xs text-text-muted">{badge.desc}</p>
+                                    <h4 className="text-sm font-bold text-primary">{badge.title}</h4>
+                                    <p className="text-xs text-text-muted mt-0.5">{badge.desc}</p>
                                 </div>
                             </div>
                         ))}

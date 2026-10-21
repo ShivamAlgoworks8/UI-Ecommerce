@@ -95,11 +95,6 @@ export default function App() {
         ? prevWishlist.filter((item) => item.id !== product.id)
         : [...prevWishlist, product];
     });
-    setWishlist((prevWishlist) =>
-      prevWishlist.some((item) => item.id === product.id)
-        ? prevWishlist.filter((item) => item.id !== product.id)
-        : [...prevWishlist, product]
-    );
   };
 
   // Total number of items in cart (sum of quantities)
@@ -111,7 +106,6 @@ export default function App() {
         <ScrollToTop />
         <div className="min-h-screen flex flex-col">
           {/* ── Sticky Navbar ── */}
-          <Navbar cartCount={cartCount} wishlistCount={wishlist.length} />
           <Navbar
             cartCount={cartCount}
             wishlistCount={wishlist.length}
@@ -180,4 +174,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

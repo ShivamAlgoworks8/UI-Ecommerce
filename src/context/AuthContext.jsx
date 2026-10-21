@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
             createdAt: new Date().toISOString(),
         };
 
-        // Save to "database"
+        // Save to localStorage
         users.push(newUser);
         localStorage.setItem("urbanova_users", JSON.stringify(users));
 

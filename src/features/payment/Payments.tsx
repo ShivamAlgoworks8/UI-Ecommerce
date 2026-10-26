@@ -1,7 +1,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Plus } from "lucide-react";
+// import { Plus } from "lucide-react";
 
 import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
 import DataTable from "@/components/admin/DataTable";
@@ -9,7 +9,7 @@ import FormDrawer from "@/components/admin/FormDrawer";
 import StatusPill from "@/components/admin/StatusPill";
 import Toast from "@/components/admin/Toast";
 
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,6 +40,8 @@ import { formatINR } from "@/lib/utils";
 type PaymentsProps = {
   payments: Payment[];
   setPayments: Dispatch<SetStateAction<Payment[]>>;
+  loading: boolean;
+  error: string;
   searchTerm: string;
   createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
@@ -48,6 +50,8 @@ type PaymentsProps = {
 function Payments({
   payments,
   setPayments,
+  loading,
+  error,
   searchTerm,
   createRequest,
   onCreateRequestHandled,
@@ -91,6 +95,7 @@ function Payments({
     });
   }, [createRequest, onCreateRequestHandled]);
 
+  /*
   const openEditModal = (payment: Payment) => {
     setEditingPayment(payment);
     setPaymentId(payment.paymentId ?? "");
@@ -108,6 +113,7 @@ function Payments({
     setDate(payment.paymentDate ?? "");
     setIsModalOpen(true);
   };
+  */
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -223,27 +229,31 @@ function Payments({
       <AdminPageHeader
         title="Payments"
         description="View and manage customer payments."
-        action={
+        /* action={
           <Button onClick={openAddModal}>
             <Plus /> Add Payment
           </Button>
-        }
+        } */
       />
 
       <DataTable
         title="Payment list"
         description="Customer payment transactions will appear here."
       >
-        {filteredPayments.length === 0 ? (
+        {loading ? (
+          <p className="p-6 text-sm text-muted-foreground">Loading payments...</p>
+        ) : error ? (
+          <p className="p-6 text-sm text-destructive">{error}</p>
+        ) : filteredPayments.length === 0 ? (
           payments.length === 0 ? (
             <EmptyState
               title="No payments yet"
               description="Add a payment to see it listed here."
-              action={
+              /* action={
                 <Button onClick={openAddModal}>
                   <Plus /> Add Payment
                 </Button>
-              }
+              } */
             />
           ) : (
             <EmptyState
@@ -294,13 +304,13 @@ function Payments({
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-4">
-                      <button
+                      {/* <button
                         type="button"
                         className="text-sm font-medium text-primary hover:underline"
                         onClick={() => openEditModal(payment)}
                       >
                         Edit
-                      </button>
+                      </button> */}
                       <button
                         type="button"
                         className="text-sm font-medium text-destructive hover:underline"

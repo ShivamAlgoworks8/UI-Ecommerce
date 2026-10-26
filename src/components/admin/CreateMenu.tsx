@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 
 const createOptions = [
   { page: "products", label: "Product" },
-  { page: "orders", label: "Order" },
+  // { page: "orders", label: "Order" },
   { page: "merchant", label: "Merchant" },
-  { page: "payments", label: "Payment" },
-  { page: "notifications", label: "Notification" },
+  // { page: "payments", label: "Payment" },
+  // { page: "notifications", label: "Notification" },
 ] as const;
 
 type CreateMenuProps = {

@@ -4,30 +4,63 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Download,
   Plus,
   Trash2,
 } from "lucide-react";
-import { AdminPage, AdminPageHeader, EmptyState } from "@/components/admin/AdminPage";
+
+import {
+  AdminPage,
+  AdminPageHeader,
+  EmptyState,
+} from "@/components/admin/AdminPage";
 import DataTable from "@/components/admin/DataTable";
 import FormDrawer from "@/components/admin/FormDrawer";
 import StatusPill from "@/components/admin/StatusPill";
 import Toast from "@/components/admin/Toast";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import Pagination from "@/components/common/Pagination";
+
 import type { MerchantData } from "@/features/merchant/types";
 import type { ProductData } from "@/features/product/types";
 import type { CreateRequest } from "@/app/types";
 import { API_BASE_URL } from "@/lib/api";
 import { formatINR } from "@/lib/utils";
 
+// Products with stock at or below this value are low-stock.
 const LOW_STOCK_THRESHOLD = 5;
 
+// Structure returned by the Spring Boot Product entity.
+type BackendProduct = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  description: string | null;
+  productType: string | null;
+  merchantName: string | null;
+  imageUrl: string | null;
+};
+
+// Props received from the parent admin component.
 type ProductProps = {
   merchants: MerchantData[];
   categories: string[];
@@ -38,10 +71,21 @@ type ProductProps = {
   onCreateRequestHandled: (id: number) => void;
 };
 
-function Products({ merchants, categories, products, setProducts, searchTerm, createRequest, onCreateRequestHandled }: ProductProps) {
+function Products({
+  merchants,
+  products,
+  setProducts,
+  searchTerm,
+  createRequest,
+  onCreateRequestHandled,
+}: ProductProps) {
+  // Drawer and editing state.
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingProductId, setEditingProductId] =
+    useState<string | null>(null);
+
+  // Product form values.
   const [merchant, setMerchant] = useState("");
   const [productName, setProductName] = useState("");
   const [price, setPrice] = useState("");
@@ -50,49 +94,79 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
   const [productType, setProductType] = useState("");
   const [status, setStatus] = useState("Available");
   const [image, setImage] = useState("");
+
+  // Notifications, selection and bulk stock input.
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [bulkStock, setBulkStock] = useState("");
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/products`)
-      .then((response) => {
-        if (!response.ok) throw new Error("Failed to fetch products");
-        return response.json();
-      })
-      .then((data) => {
-        const backendProducts: ProductData[] = data.map((product: {
-          id: string;
-          name: string;
-          price: number;
-          stock: number;
-          description: string;
-          productType: string;
-        }) => ({
-          id: product.id,
-          merchant: "",
-          productName: product.name,
-          price: product.price,
-          stock: product.stock,
-          description: product.description,
-          productType: product.productType,
-          status: "Available",
-          image: "",
-        }));
-        setProducts(backendProducts);
-      })
-      .catch((error) => {
-        console.error("Error fetching products:", error);
-      });
-  }, [setProducts]);
+  // Loading state prevents repeated submissions.
+  const [isSaving, setIsSaving] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
+  // Search/filter and pagination settings.
   const [statusFilter, setStatusFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 5;
 
+  // Sorting configuration.
+  const [sortField, setSortField] = useState<
+    "productName" | "price" | "stock" | "productType" | null
+  >(null);
+  const [sortDirection, setSortDirection] =
+    useState<"asc" | "desc">("asc");
+
+  // Convert the backend response into the frontend product structure.
+  const mapBackendProduct = (item: BackendProduct): ProductData => ({
+    id: item.id,
+    merchant: item.merchantName ?? "",
+    productName: item.name,
+    price: item.price,
+    stock: item.stock,
+    description: item.description ?? "",
+    productType: item.productType ?? "",
+    status: item.stock > 0 ? "Available" : "NA",
+    image: item.imageUrl ?? "",
+  });
+
+  // Fetch products from Spring Boot when the page loads.
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/products`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data: BackendProduct[] = await response.json();
+
+        if (isMounted) {
+          setProducts(data.map(mapBackendProduct));
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+
+        if (isMounted) {
+          setToastMessage("Unable to load products from backend");
+        }
+      }
+    };
+
+    void fetchProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setProducts]);
+
+  // Reset the form and open the Add Product drawer.
   const openAddModal = () => {
     setIsEditMode(false);
     setEditingProductId(null);
+
     setMerchant("");
     setProductName("");
     setPrice("");
@@ -101,20 +175,25 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     setProductType("");
     setStatus("Available");
     setImage("");
+
     setIsModalOpen(true);
   };
 
+  // Handle Add Product requests triggered elsewhere in the admin portal.
   useEffect(() => {
     if (createRequest?.page !== "products") return;
+
     startTransition(() => {
       openAddModal();
       onCreateRequestHandled(createRequest.id);
     });
   }, [createRequest, onCreateRequestHandled]);
 
+  // Populate the form with the selected product's current values.
   const openEditModal = (product: ProductData) => {
     setIsEditMode(true);
     setEditingProductId(product.id);
+
     setMerchant(product.merchant);
     setProductName(product.productName);
     setPrice(String(product.price));
@@ -123,204 +202,400 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     setProductType(product.productType);
     setStatus(product.status);
     setImage(product.image);
+
     setIsModalOpen(true);
   };
 
+  // Close the drawer and reset editing identifiers.
   const closeModal = () => {
     setIsModalOpen(false);
     setIsEditMode(false);
     setEditingProductId(null);
   };
 
-  const handleSubmitProduct = async (event: FormEvent<HTMLFormElement>) => {
+  // Submit the form to create or update a product in MongoDB.
+  const handleSubmitProduct = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
-    if (!productName.trim() || !price || !stock || !description.trim() || !productType) {
-      setToastMessage("Complete the required product fields before saving");
-      return;
-    }
-    if (!Number.isFinite(Number(price)) || Number(price) < 0 || !Number.isFinite(Number(stock)) || Number(stock) < 0) {
-      setToastMessage("Price and stock must be valid non-negative numbers");
+
+    // Validate required fields, including merchant selection.
+    if (
+      !merchant ||
+      !productName.trim() ||
+      !price.trim() ||
+      !stock.trim() ||
+      !description.trim() ||
+      !productType.trim()
+    ) {
+      setToastMessage("Please complete all required fields");
       return;
     }
 
-    if (isEditMode && editingProductId !== null) {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/products/${editingProductId}`,
-      {
-        method: "PUT",
+    // Match the backend DTO validation rules.
+    const numericPrice = Number(price);
+    const numericStock = Number(stock);
+
+    if (
+      !Number.isFinite(numericPrice) ||
+      numericPrice <= 0 ||
+      !Number.isFinite(numericStock) ||
+      !Number.isInteger(numericStock) ||
+      numericStock < 0
+    ) {
+      setToastMessage(
+        "Price must be greater than zero and stock must be a non-negative integer",
+      );
+      return;
+    }
+
+    // These property names match ProductRequestDTO.java.
+    const requestBody = {
+      name: productName.trim(),
+      price: numericPrice,
+      stock: numericStock,
+      description: description.trim(),
+      productType,
+      merchantName: merchant,
+      imageUrl: image.trim(),
+    };
+
+    setIsSaving(true);
+
+    try {
+      // Update the selected product.
+      if (isEditMode && editingProductId !== null) {
+        const response = await fetch(
+          `${API_BASE_URL}/api/products/${editingProductId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+          },
+        );
+
+        if (!response.ok) {
+          const message = await response.text();
+
+          throw new Error(
+            message || "Failed to update product",
+          );
+        }
+
+        const updatedProduct: BackendProduct = await response.json();
+
+        // Use the saved backend response to update the UI.
+        const mappedProduct = mapBackendProduct(updatedProduct);
+
+        setProducts((previous) =>
+          previous.map((product) =>
+            product.id === editingProductId
+              ? mappedProduct
+              : product,
+          ),
+        );
+
+        closeModal();
+        setToastMessage("Product updated successfully");
+        return;
+      }
+
+      // Create a new product in the backend.
+      const response = await fetch(`${API_BASE_URL}/api/products`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: productName.trim(),
-          price: Number(price),
-          stock: Number(stock),
-          description: description.trim(),
-          productType,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to update product");
-    }
-
-    const updatedProduct = await response.json();
-
-    setProducts((previousProducts) =>
-      previousProducts.map((product) =>
-        product.id === editingProductId
-          ? {
-              ...product,
-              merchant: merchant || product.merchant,
-              productName: updatedProduct.name,
-              price: updatedProduct.price,
-              stock: updatedProduct.stock,
-              description: updatedProduct.description,
-              productType: updatedProduct.productType,
-              status,
-              image,
-            }
-          : product,
-      ),
-    );
-
-    closeModal();
-    setToastMessage("Product updated successfully");
-    return;
-  } catch (error) {
-    console.error("Error updating product:", error);
-    setToastMessage(
-      error instanceof Error ? error.message : "Failed to update product",
-    );
-    return;
-  }
-}
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/products`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: productName,
-          price: Number(price),
-          stock: Number(stock),
-          description,
-          productType,
-        }),
+        body: JSON.stringify(requestBody),
       });
-      if (!response.ok) throw new Error("Failed to create product");
-      const savedProduct = await response.json();
-      const newProduct: ProductData = {
-        id: savedProduct.id,
-        merchant,
-        productName: savedProduct.name,
-        price: savedProduct.price,
-        stock: savedProduct.stock,
-        description: savedProduct.description,
-        productType: savedProduct.productType,
-        status,
-        image,
-      };
-      setProducts((previousProducts) => [...previousProducts, newProduct]);
-      setMerchant("");
-      setProductName("");
-      setPrice("");
-      setStock("");
-      setDescription("");
-      setProductType("");
-      setStatus("Available");
-      setImage("");
+
+      if (!response.ok) {
+        const message = await response.text();
+
+        throw new Error(
+          message || "Failed to create product",
+        );
+      }
+
+      const savedProduct: BackendProduct = await response.json();
+
+      // Append the saved product, including its MongoDB ID.
+      const newProduct = mapBackendProduct(savedProduct);
+
+      setProducts((previous) => [...previous, newProduct]);
+
       closeModal();
+      setCurrentPage(1);
       setToastMessage("Product added successfully");
     } catch (error) {
-      console.error("Error creating product:", error);
-      setToastMessage(error instanceof Error ? error.message : "Failed to create product");
+      console.error("Error saving product:", error);
+
+      setToastMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to save product",
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // Delete one product through the backend API.
   const handleDeleteProduct = async (productId: string) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this product?",
-  );
-
-  if (!confirmDelete) return;
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/products/${productId}`,
-      {
-        method: "DELETE",
-      },
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this product?",
     );
 
-    if (!response.ok) {
-      throw new Error("Failed to delete product");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/products/${productId}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok) {
+        let message = "Failed to delete product";
+        try {
+          const errJson = await response.json();
+          message = errJson.message || errJson.error || message;
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
+        }
+        throw new Error(message);
+      }
+
+      const deleted: boolean = await response.json();
+
+      if (deleted !== true) {
+        throw new Error("Product could not be deleted");
+      }
+
+      // Remove the row only after backend deletion succeeds.
+      setProducts((previous) =>
+        previous.filter((product) => product.id !== productId),
+      );
+
+      setSelectedProductIds((previous) =>
+        previous.filter((id) => id !== productId),
+      );
+
+      setToastMessage("Product deleted successfully");
+    } catch (error) {
+      console.error("Error deleting product:", error);
+
+      setToastMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete product",
+      );
     }
+  };
 
-    const deleted = await response.json();
-
-    if (deleted !== true) {
-      throw new Error("Product could not be deleted");
-    }
-
-    setProducts((previousProducts) =>
-      previousProducts.filter((product) => product.id !== productId),
-    );
-
-    setSelectedProductIds((previous) =>
-      previous.filter((id) => id !== productId),
-    );
-
-    setToastMessage("Product deleted successfully");
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    setToastMessage(
-      error instanceof Error ? error.message : "Failed to delete product",
-    );
-  }
-};
-
+  // Select or deselect one product.
   const toggleProductSelection = (productId: string) => {
-    setSelectedProductIds((previous) => previous.includes(productId)
-      ? previous.filter((id) => id !== productId)
-      : [...previous, productId],
+    setSelectedProductIds((previous) =>
+      previous.includes(productId)
+        ? previous.filter((id) => id !== productId)
+        : [...previous, productId],
     );
   };
 
+  // Select or deselect all products visible on the current page.
   const toggleVisibleProducts = () => {
     const visibleIds = currentProducts.map((product) => product.id);
-    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedProductIds.includes(id));
-    setSelectedProductIds((previous) => allSelected
-      ? previous.filter((id) => !visibleIds.includes(id))
-      : [...new Set([...previous, ...visibleIds])],
+
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedProductIds.includes(id));
+
+    setSelectedProductIds((previous) =>
+      allSelected
+        ? previous.filter((id) => !visibleIds.includes(id))
+        : [...new Set([...previous, ...visibleIds])],
     );
   };
 
-  const applyBulkStock = () => {
-    if (!bulkStock || Number(bulkStock) < 0 || selectedProductIds.length === 0) return;
-    setProducts((previous) => previous.map((product) => selectedProductIds.includes(product.id)
-      ? { ...product, stock: Number(bulkStock) }
-      : product,
-    ));
-    setSelectedProductIds([]);
-    setBulkStock("");
-    setToastMessage("Selected inventory updated");
+  // Update stock for selected products through the existing PUT endpoint.
+  const applyBulkStock = async () => {
+    const newStock = Number(bulkStock);
+
+    if (
+      bulkStock.trim() === "" ||
+      !Number.isInteger(newStock) ||
+      newStock < 0 ||
+      selectedProductIds.length === 0
+    ) {
+      setToastMessage("Enter a valid non-negative stock quantity");
+      return;
+    }
+
+    const selectedProducts = products.filter((product) =>
+      selectedProductIds.includes(product.id),
+    );
+
+    setIsBulkProcessing(true);
+
+    try {
+      // Each request uses the full product payload expected by the DTO.
+      const results = await Promise.allSettled(
+        selectedProducts.map(async (product) => {
+          const response = await fetch(
+            `${API_BASE_URL}/api/products/${product.id}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                name: product.productName,
+                price: product.price,
+                stock: newStock,
+                description: product.description,
+                productType: product.productType,
+                merchantName: product.merchant,
+                imageUrl: product.image,
+              }),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to update ${product.productName}`,
+            );
+          }
+
+          return mapBackendProduct(
+            (await response.json()) as BackendProduct,
+          );
+        }),
+      );
+
+      // Apply only the product updates confirmed by the backend.
+      const successfulProducts = results
+        .filter(
+          (
+            result,
+          ): result is PromiseFulfilledResult<ProductData> =>
+            result.status === "fulfilled",
+        )
+        .map((result) => result.value);
+
+      setProducts((previous) =>
+        previous.map((product) => {
+          const updated = successfulProducts.find(
+            (item) => item.id === product.id,
+          );
+
+          return updated ?? product;
+        }),
+      );
+
+      const failedCount = results.length - successfulProducts.length;
+
+      if (failedCount > 0) {
+        setToastMessage(
+          `${successfulProducts.length} updated; ${failedCount} failed. Refresh and verify the product list.`,
+        );
+      } else {
+        setToastMessage("Selected products' stock updated");
+      }
+
+      setSelectedProductIds([]);
+      setBulkStock("");
+    } catch (error) {
+      console.error("Bulk stock update failed:", error);
+
+      setToastMessage(
+        error instanceof Error
+          ? error.message
+          : "Bulk stock update failed",
+      );
+    } finally {
+      setIsBulkProcessing(false);
+    }
   };
 
-  const deleteSelectedProducts = () => {
+  // Delete selected products through the backend API.
+  const deleteSelectedProducts = async () => {
     if (selectedProductIds.length === 0) return;
-    if (!window.confirm(`Delete ${selectedProductIds.length} selected product${selectedProductIds.length === 1 ? "" : "s"}?`)) return;
-    setProducts((previous) => previous.filter((product) => !selectedProductIds.includes(product.id)));
-    setSelectedProductIds([]);
-    setToastMessage("Selected products deleted");
+
+    const confirmed = window.confirm(
+      `Delete ${selectedProductIds.length} selected product${
+        selectedProductIds.length === 1 ? "" : "s"
+      }?`,
+    );
+
+    if (!confirmed) return;
+
+    setIsBulkProcessing(true);
+
+    try {
+      // allSettled keeps successful deletions even if some requests fail.
+      const results = await Promise.allSettled(
+        selectedProductIds.map(async (id) => {
+          const response = await fetch(
+            `${API_BASE_URL}/api/products/${id}`,
+            { method: "DELETE" },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to delete product ${id}`);
+          }
+
+          const deleted: boolean = await response.json();
+
+          if (deleted !== true) {
+            throw new Error(`Product ${id} was not deleted`);
+          }
+
+          return id;
+        }),
+      );
+
+      const deletedIds = results
+        .filter(
+          (result): result is PromiseFulfilledResult<string> =>
+            result.status === "fulfilled",
+        )
+        .map((result) => result.value);
+
+      // Remove only products whose backend deletion succeeded.
+      setProducts((previous) =>
+        previous.filter((product) => !deletedIds.includes(product.id)),
+      );
+
+      setSelectedProductIds([]);
+
+      const failedCount = results.length - deletedIds.length;
+
+      if (failedCount > 0) {
+        setToastMessage(
+          `${deletedIds.length} deleted; ${failedCount} failed. Refresh and verify the product list.`,
+        );
+      } else {
+        setToastMessage("Selected products deleted successfully");
+      }
+    } catch (error) {
+      console.error("Bulk delete failed:", error);
+
+      setToastMessage(
+        error instanceof Error
+          ? error.message
+          : "Bulk delete failed",
+      );
+    } finally {
+      setIsBulkProcessing(false);
+    }
   };
 
-  const [sortField, setSortField] = useState<"productName" | "price" | "stock" | "productType" | null>(null);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = (field: "productName" | "price" | "stock" | "productType") => {
+  // Sort the table by the chosen column.
+  const handleSort = (
+    field: "productName" | "price" | "stock" | "productType",
+  ) => {
     if (sortField === field) {
       if (sortDirection === "asc") {
         setSortDirection("desc");
@@ -334,58 +609,68 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     }
   };
 
+  // Filter products by search text and stock/status.
   const filteredProducts = products.filter((product) => {
     const searchValue = searchTerm.toLowerCase();
-    const matchesSearch = product.productName.toLowerCase().includes(searchValue)
-      || product.merchant.toLowerCase().includes(searchValue)
-      || product.productType.toLowerCase().includes(searchValue);
-    const matchesStatus = statusFilter === "All"
-      || (statusFilter === "Low stock" && product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD)
-      || (statusFilter === "Out of stock" && product.stock <= 0)
-      || (statusFilter === "Available" && product.status === "Available" && product.stock > LOW_STOCK_THRESHOLD)
-      || (statusFilter === "NA" && product.status === "NA");
+
+    const matchesSearch =
+      product.productName.toLowerCase().includes(searchValue) ||
+      product.merchant.toLowerCase().includes(searchValue) ||
+      product.productType.toLowerCase().includes(searchValue);
+
+    const matchesStatus =
+      statusFilter === "All" ||
+      (statusFilter === "Low stock" &&
+        product.stock > 0 &&
+        product.stock <= LOW_STOCK_THRESHOLD) ||
+      (statusFilter === "Out of stock" && product.stock <= 0) ||
+      (statusFilter === "Available" &&
+        product.stock > LOW_STOCK_THRESHOLD) ||
+      (statusFilter === "NA" && product.stock <= 0);
+
     return matchesSearch && matchesStatus;
   });
 
+  // Sort a copy so the original products state is not mutated.
   const sortedProducts = [...filteredProducts].sort((first, second) => {
     if (!sortField) return 0;
-    const aVal = first[sortField];
-    const bVal = second[sortField];
-    if (typeof aVal === "number" && typeof bVal === "number") {
-      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+
+    const firstValue = first[sortField];
+    const secondValue = second[sortField];
+
+    if (
+      typeof firstValue === "number" &&
+      typeof secondValue === "number"
+    ) {
+      return sortDirection === "asc"
+        ? firstValue - secondValue
+        : secondValue - firstValue;
     }
-    const aStr = String(aVal).toLowerCase();
-    const bStr = String(bVal).toLowerCase();
-    return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+
+    const firstString = String(firstValue).toLowerCase();
+    const secondString = String(secondValue).toLowerCase();
+
+    return sortDirection === "asc"
+      ? firstString.localeCompare(secondString)
+      : secondString.localeCompare(firstString);
   });
 
-  const exportCSV = () => {
-    if (sortedProducts.length === 0) return;
-    const headers = ["Product Name", "Merchant", "Price", "Stock", "Category", "Status"];
-    const rows = sortedProducts.map((p) => [
-      `"${p.productName.replace(/"/g, '""')}"`,
-      `"${(p.merchant || "").replace(/"/g, '""')}"`,
-      p.price,
-      p.stock,
-      `"${p.productType.replace(/"/g, '""')}"`,
-      `"${p.status}"`,
-    ]);
-    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `nexora_products_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setToastMessage("Products exported to CSV");
-  };
-
-  const totalPages = Math.ceil(sortedProducts.length / productsPerPage);
-  const visiblePage = Math.min(currentPage, Math.max(totalPages, 1));
+  // Calculate pagination values.
+  const totalPages = Math.ceil(
+    sortedProducts.length / productsPerPage,
+  );
+  const visiblePage = Math.min(
+    currentPage,
+    Math.max(totalPages, 1),
+  );
   const startIndex = (visiblePage - 1) * productsPerPage;
-  const currentProducts = sortedProducts.slice(startIndex, startIndex + productsPerPage);
 
+  const currentProducts = sortedProducts.slice(
+    startIndex,
+    startIndex + productsPerPage,
+  );
+
+  // Quick status filter buttons.
   const filterChips = [
     { id: "All", label: "All Items" },
     { id: "Available", label: "In Stock" },
@@ -393,51 +678,75 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
     { id: "Out of stock", label: "Out of Stock" },
   ];
 
+  // Render the Products administration page.
   return (
     <AdminPage>
       <AdminPageHeader
         title="Products"
         description="View and manage products, inventories, and pricing across your store."
         action={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5" disabled={sortedProducts.length === 0}>
-              <Download className="size-4" />
-              Export CSV
-            </Button>
-            <Button size="sm" onClick={openAddModal} className="gap-1.5 shadow-sm">
-              <Plus className="size-4" />
-              Add Product
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            onClick={openAddModal}
+            className="gap-1.5 shadow-sm"
+          >
+            <Plus className="size-4" />
+            Add Product
+          </Button>
         }
       />
 
-      <section className="inventory-summary" aria-label="Inventory overview">
+      {/* Inventory summary cards. */}
+      <section
+        className="inventory-summary"
+        aria-label="Inventory overview"
+      >
         <article>
           <span>Total catalog units</span>
-          <strong>{products.reduce((total, product) => total + product.stock, 0)}</strong>
+          <strong>
+            {products.reduce(
+              (total, product) => total + product.stock,
+              0,
+            )}
+          </strong>
         </article>
+
         <article>
           <span>Low stock warning</span>
           <strong className="text-amber-600 dark:text-amber-400">
-            {products.filter((product) => product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD).length}
+            {
+              products.filter(
+                (product) =>
+                  product.stock > 0 &&
+                  product.stock <= LOW_STOCK_THRESHOLD,
+              ).length
+            }
           </strong>
         </article>
+
         <article>
           <span>Out of stock</span>
           <strong className="text-destructive">
-            {products.filter((product) => product.stock <= 0).length}
+            {
+              products.filter((product) => product.stock <= 0).length
+            }
           </strong>
         </article>
       </section>
 
-      {/* Quick Filter Chips */}
-      <div className="filter-chips-bar" role="group" aria-label="Quick status filters">
+      {/* Quick filters for product availability. */}
+      <div
+        className="filter-chips-bar"
+        role="group"
+        aria-label="Quick status filters"
+      >
         {filterChips.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            className={`filter-chip ${statusFilter === chip.id ? "filter-chip-active" : ""}`}
+            className={`filter-chip ${
+              statusFilter === chip.id ? "filter-chip-active" : ""
+            }`}
             onClick={() => {
               setStatusFilter(chip.id);
               setCurrentPage(1);
@@ -448,26 +757,48 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
         ))}
       </div>
 
+      {/* Product catalog and bulk actions. */}
       <DataTable
         title="Product catalog"
-        description="Showing active products in your storefront inventory."
+        description="View and manage products in your storefront inventory."
         toolbar={
           <div className="product-toolbar">
             <div className="bulk-actions">
               <span>{selectedProductIds.length} selected</span>
+
               <Input
                 aria-label="Set stock for selected products"
                 type="number"
                 min="0"
+                step="1"
                 placeholder="New stock"
                 className="bulk-stock-input"
                 value={bulkStock}
                 onChange={(event) => setBulkStock(event.target.value)}
               />
-              <Button variant="outline" size="sm" disabled={!bulkStock || selectedProductIds.length === 0} onClick={applyBulkStock}>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  isBulkProcessing ||
+                  !bulkStock.trim() ||
+                  selectedProductIds.length === 0
+                }
+                onClick={() => void applyBulkStock()}
+              >
                 Update stock
               </Button>
-              <Button variant="outline" size="sm" disabled={selectedProductIds.length === 0} onClick={deleteSelectedProducts}>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  isBulkProcessing ||
+                  selectedProductIds.length === 0
+                }
+                onClick={() => void deleteSelectedProducts()}
+              >
                 <Trash2 className="size-3.5" />
                 Delete selected
               </Button>
@@ -479,159 +810,399 @@ function Products({ merchants, categories, products, setProducts, searchTerm, cr
           <EmptyState
             title="No products yet"
             description="Once products are added, you will be able to view and manage them here."
-            action={<Button onClick={openAddModal}><Plus className="size-4 mr-1.5" />Add Product</Button>}
+            action={
+              <Button onClick={openAddModal}>
+                <Plus className="mr-1.5 size-4" />
+                Add Product
+              </Button>
+            }
+          />
+        ) : sortedProducts.length === 0 ? (
+          <EmptyState
+            title="No products found"
+            description="Try changing your search term or filter chips."
           />
         ) : (
-          sortedProducts.length === 0 ? (
-            <EmptyState title="No products found" description="Try changing your search term or filter chips." />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="w-12 px-4">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                {/* Select all rows on the current page. */}
+                <TableHead className="w-12 px-4">
+                  <input
+                    type="checkbox"
+                    aria-label="Select visible products"
+                    checked={
+                      currentProducts.length > 0 &&
+                      currentProducts.every((product) =>
+                        selectedProductIds.includes(product.id),
+                      )
+                    }
+                    onChange={toggleVisibleProducts}
+                  />
+                </TableHead>
+
+                <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Merchant
+                </TableHead>
+
+                {/* Product name sorting. */}
+                <TableHead
+                  className="h-11 cursor-pointer select-none px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  onClick={() => handleSort("productName")}
+                >
+                  <div className="flex items-center gap-1">
+                    Product Name
+                    {sortField === "productName" ? (
+                      sortDirection === "asc" ? (
+                        <ArrowUp className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowDown className="size-3.5 text-primary" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+
+                {/* Price sorting. */}
+                <TableHead
+                  className="h-11 cursor-pointer select-none px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  onClick={() => handleSort("price")}
+                >
+                  <div className="flex items-center gap-1">
+                    Price
+                    {sortField === "price" ? (
+                      sortDirection === "asc" ? (
+                        <ArrowUp className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowDown className="size-3.5 text-primary" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+
+                {/* Stock sorting. */}
+                <TableHead
+                  className="h-11 cursor-pointer select-none px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  onClick={() => handleSort("stock")}
+                >
+                  <div className="flex items-center gap-1">
+                    Stock
+                    {sortField === "stock" ? (
+                      sortDirection === "asc" ? (
+                        <ArrowUp className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowDown className="size-3.5 text-primary" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+
+                {/* Product category sorting. */}
+                <TableHead
+                  className="h-11 cursor-pointer select-none px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  onClick={() => handleSort("productType")}
+                >
+                  <div className="flex items-center gap-1">
+                    Category
+                    {sortField === "productType" ? (
+                      sortDirection === "asc" ? (
+                        <ArrowUp className="size-3.5 text-primary" />
+                      ) : (
+                        <ArrowDown className="size-3.5 text-primary" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                    )}
+                  </div>
+                </TableHead>
+
+                <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Status
+                </TableHead>
+
+                <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Image URL
+                </TableHead>
+
+                <TableHead className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Action
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {currentProducts.map((product) => (
+                <TableRow
+                  key={product.id}
+                  className="border-t border-border transition-colors hover:bg-muted/30"
+                >
+                  <TableCell className="px-4 py-3">
                     <input
                       type="checkbox"
-                      aria-label="Select visible products"
-                      checked={currentProducts.length > 0 && currentProducts.every((product) => selectedProductIds.includes(product.id))}
-                      onChange={toggleVisibleProducts}
+                      aria-label={`Select ${product.productName}`}
+                      checked={selectedProductIds.includes(product.id)}
+                      onChange={() =>
+                        toggleProductSelection(product.id)
+                      }
                     />
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Merchant</TableHead>
-                  <TableHead
-                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
-                    onClick={() => handleSort("productName")}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Product Name</span>
-                      {sortField === "productName" ? (
-                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
-                      )}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-sm text-muted-foreground">
+                    {product.merchant || "-"}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-sm font-semibold">
+                    {product.productName}
+                  </TableCell>
+
+                  <TableCell className="whitespace-nowrap px-4 py-3 text-sm font-medium">
+                    {formatINR(product.price)}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-sm">
+                    {product.stock}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-sm">
+                    {product.productType || "-"}
+                  </TableCell>
+
+                  {/* Stock-aware status display. */}
+                  <TableCell className="px-4 py-3">
+                    <StatusPill
+                      status={
+                        product.stock <= 0
+                          ? "Out of stock"
+                          : product.stock <= LOW_STOCK_THRESHOLD
+                            ? "Low stock"
+                            : product.status
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="max-w-40 truncate px-4 py-3 text-xs text-muted-foreground">
+                    {product.image || "No image"}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3">
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-primary hover:underline"
+                        onClick={() => openEditModal(product)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-destructive hover:underline"
+                        onClick={() =>
+                          void handleDeleteProduct(product.id)
+                        }
+                      >
+                        Delete
+                      </button>
                     </div>
-                  </TableHead>
-                  <TableHead
-                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
-                    onClick={() => handleSort("price")}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Price</span>
-                      {sortField === "price" ? (
-                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
-                    onClick={() => handleSort("stock")}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Stock</span>
-                      {sortField === "stock" ? (
-                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
-                    onClick={() => handleSort("productType")}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Category</span>
-                      {sortField === "productType" ? (
-                        sortDirection === "asc" ? <ArrowUp className="size-3.5 text-primary" /> : <ArrowDown className="size-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                  <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Image</TableHead>
-                  <TableHead className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</TableHead>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentProducts.map((product) => (
-                  <TableRow key={product.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                    <TableCell className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${product.productName}`}
-                        checked={selectedProductIds.includes(product.id)}
-                        onChange={() => toggleProductSelection(product.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-muted-foreground">{product.merchant || "-"}</TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-sm">{product.productName}</TableCell>
-                    <TableCell className="whitespace-nowrap px-4 py-3 font-medium text-sm">
-                      {formatINR(product.price)}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm">{product.stock}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm">{product.productType}</TableCell>
-                    <TableCell className="px-4 py-3">
-                      <StatusPill status={product.stock <= 0 ? "Out of stock" : product.stock <= LOW_STOCK_THRESHOLD ? "Low stock" : product.status} />
-                    </TableCell>
-                    <TableCell className="max-w-40 truncate px-4 py-3 text-xs text-muted-foreground">{product.image || "No image"}</TableCell>
-                    <TableCell className="px-4 py-3">
-                      <div className="flex justify-end gap-3">
-                        <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => openEditModal(product)}>Edit</button>
-                        <button type="button" className="text-xs font-semibold text-destructive hover:underline" onClick={() => handleDeleteProduct(product.id)}>Delete</button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )
+              ))}
+            </TableBody>
+          </Table>
         )}
       </DataTable>
 
-      {filteredProducts.length > 0 && <Pagination currentPage={visiblePage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+      {/* Pagination for filtered results. */}
+      {filteredProducts.length > 0 && (
+        <Pagination
+          currentPage={visiblePage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
+      {/* Add/Edit Product drawer. */}
       <FormDrawer
         open={isModalOpen}
         onOpenChange={(open) => !open && closeModal()}
         title={isEditMode ? "Edit Product" : "Add Product"}
-        description={isEditMode ? "Update the product details." : "Enter the details for the new product."}
+        description={
+          isEditMode
+            ? "Update the product details."
+            : "Enter the details for the new product."
+        }
         formId="product-form"
-        submitLabel={isEditMode ? "Save changes" : "Save product"}
+        submitLabel={
+          isSaving
+            ? "Saving..."
+            : isEditMode
+              ? "Save changes"
+              : "Save product"
+        }
       >
-          <form id="product-form" onSubmit={handleSubmitProduct} className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="product-merchant">Merchant</Label>
-                <Select value={merchant || "none"} onValueChange={(value) => setMerchant(value === "none" ? "" : value)}>
-                  <SelectTrigger id="product-merchant"><SelectValue placeholder="Select merchant" /></SelectTrigger>
-                  <SelectContent><SelectItem value="none" disabled>Select merchant</SelectItem>{merchants.map((item) => <SelectItem key={item.id} value={item.merchantName}>{item.merchantName}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2 sm:col-span-2"><Label htmlFor="product-name">Product Name</Label><Input id="product-name" value={productName} onChange={(event) => setProductName(event.target.value)} placeholder="Enter product name" required /></div>
-              <div className="grid gap-2"><Label htmlFor="product-price">Price</Label><Input id="product-price" type="number" min="0" step="any" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Enter price" required /></div>
-              <div className="grid gap-2"><Label htmlFor="product-stock">Stock / Inventory</Label><Input id="product-stock" type="number" min="0" value={stock} onChange={(event) => setStock(event.target.value)} placeholder="Enter stock" required /></div>
-              <div className="grid gap-2 sm:col-span-2"><Label htmlFor="product-description">Description</Label><Textarea id="product-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Enter product description" rows={4} required /></div>
-              <div className="grid gap-2">
-                <Label htmlFor="product-type">Product Type</Label>
-                <Select value={productType || "none"} onValueChange={(value) => setProductType(value === "none" ? "" : value)} required>
-                  <SelectTrigger id="product-type"><SelectValue placeholder="Select product type" /></SelectTrigger>
-                  <SelectContent><SelectItem value="none" disabled>Select product type</SelectItem>{categories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="product-status">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger id="product-status"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="Available">Available</SelectItem><SelectItem value="NA">NA</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2 sm:col-span-2"><Label htmlFor="product-image">Images</Label><Input id="product-image" type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) setImage(file.name); }} /></div>
+        <form
+          id="product-form"
+          onSubmit={handleSubmitProduct}
+          className="space-y-5"
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Select a merchant and populate its product type. */}
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="product-merchant">Merchant</Label>
+
+              <Select
+                value={merchant || "none"}
+                onValueChange={(value) => {
+                  const selectedMerchant = merchants.find(
+                    (item) => item.merchantName === value,
+                  );
+
+                  setMerchant(value === "none" ? "" : value);
+
+                  setProductType(
+                    value === "none"
+                      ? ""
+                      : selectedMerchant?.productType ?? "",
+                  );
+                }}
+              >
+                <SelectTrigger id="product-merchant">
+                  <SelectValue placeholder="Select merchant" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="none" disabled>
+                    Select merchant
+                  </SelectItem>
+
+                  {merchants.map((item) => (
+                    <SelectItem
+                      key={item.id}
+                      value={item.merchantName}
+                    >
+                      {item.merchantName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </form>
+
+            {/* Product name. */}
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="product-name">Product Name</Label>
+              <Input
+                id="product-name"
+                value={productName}
+                onChange={(event) =>
+                  setProductName(event.target.value)
+                }
+                placeholder="Enter product name"
+                required
+              />
+            </div>
+
+            {/* Product price must be greater than zero. */}
+            <div className="grid gap-2">
+              <Label htmlFor="product-price">Price</Label>
+              <Input
+                id="product-price"
+                type="number"
+                min="0.01"
+                step="any"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                placeholder="Enter price"
+                required
+              />
+            </div>
+
+            {/* Stock must be a non-negative integer. */}
+            <div className="grid gap-2">
+              <Label htmlFor="product-stock">Stock / Inventory</Label>
+              <Input
+                id="product-stock"
+                type="number"
+                min="0"
+                step="1"
+                value={stock}
+                onChange={(event) => setStock(event.target.value)}
+                placeholder="Enter stock"
+                required
+              />
+            </div>
+
+            {/* Product description. */}
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="product-description">Description</Label>
+              <Textarea
+                id="product-description"
+                value={description}
+                onChange={(event) =>
+                  setDescription(event.target.value)
+                }
+                placeholder="Enter product description"
+                rows={4}
+                required
+              />
+            </div>
+
+            {/* Display the product type associated with the merchant. */}
+            <div className="grid gap-2">
+              <Label htmlFor="product-type">Product Type</Label>
+              <Input
+                id="product-type"
+                value={productType}
+                placeholder="Select a merchant first"
+                readOnly
+              />
+            </div>
+
+            {/* Status selection for the admin interface. */}
+            <div className="grid gap-2">
+              <Label htmlFor="product-status">Status</Label>
+
+              <Select
+                value={status}
+                onValueChange={setStatus}
+              >
+                <SelectTrigger id="product-status">
+                  <SelectValue />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="Available">
+                    Available
+                  </SelectItem>
+                  <SelectItem value="NA">NA</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Paste a direct URL; this form does not upload local files. */}
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="product-image">Image URL</Label>
+              <Input
+                id="product-image"
+                type="url"
+                value={image}
+                onChange={(event) => setImage(event.target.value)}
+                placeholder="Paste direct product image URL"
+              />
+            </div>
+          </div>
+        </form>
       </FormDrawer>
-      <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+
+      {/* Display success and error messages. */}
+      <Toast
+        message={toastMessage}
+        onDismiss={() => setToastMessage(null)}
+      />
     </AdminPage>
   );
 }

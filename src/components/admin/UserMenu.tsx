@@ -58,6 +58,16 @@ function UserMenu({ themeMode, onThemeChange, onLogout }: UserMenuProps) {
     setIsThemeExpanded(false);
   };
 
+  let adminName = "Administrator";
+  try {
+    const raw = localStorage.getItem("nexora_user");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.name) adminName = parsed.name;
+    }
+  } catch {}
+  const adminInitial = adminName.charAt(0).toUpperCase();
+
   return (
     <div className="user-menu" ref={menuRef}>
       <button
@@ -68,9 +78,9 @@ function UserMenu({ themeMode, onThemeChange, onLogout }: UserMenuProps) {
         aria-haspopup="menu"
         onClick={toggleMenu}
       >
-        <span className="user-avatar" aria-hidden="true">S</span>
+        <span className="user-avatar" aria-hidden="true">{adminInitial}</span>
         <span className="user-menu-identity">
-          <strong>Shivam</strong>
+          <strong>{adminName}</strong>
           <span>Administrator</span>
         </span>
         <ChevronDown className="user-menu-chevron size-4 text-muted-foreground" aria-hidden="true" />
@@ -81,7 +91,7 @@ function UserMenu({ themeMode, onThemeChange, onLogout }: UserMenuProps) {
           <div className="user-menu-account">
             <CircleUserRound className="size-8 shrink-0 text-primary" aria-hidden="true" />
             <span className="grid gap-1">
-              <strong className="text-sm font-semibold">Shivam</strong>
+              <strong className="text-sm font-semibold">{adminName}</strong>
               <span className="text-xs text-muted-foreground">Administrator</span>
             </span>
           </div>

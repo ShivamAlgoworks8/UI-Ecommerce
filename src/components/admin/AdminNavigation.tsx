@@ -1,5 +1,5 @@
 import {
-  Bell,
+  // Bell,
   CreditCard,
   Ellipsis,
   FolderTree,
@@ -21,7 +21,7 @@ const navGroups = [
     title: "Overview",
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { id: "notifications", label: "Notifications", icon: Bell },
+      // { id: "notifications", label: "Notifications", icon: Bell },
     ],
   },
   {
@@ -48,7 +48,7 @@ const mobilePages = [
   { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "products", label: "Products", icon: Package },
-  { id: "notifications", label: "Alerts", icon: Bell },
+  // { id: "notifications", label: "Alerts", icon: Bell },
 ] as const;
 
 function AdminNavigation({

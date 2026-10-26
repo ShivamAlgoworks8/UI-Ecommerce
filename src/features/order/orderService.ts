@@ -6,7 +6,7 @@ export const getOrders = async (): Promise<Order[]> => {
   const response = await fetch(`${API_BASE_URL}/api/orders`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch orders");
+    throw new Error(`Failed to fetch orders: ${response.status}`);
   }
 
   return response.json();
@@ -45,7 +45,8 @@ export const updateOrder = async (
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update order");
+    const errorDetails = await response.text();
+    throw new Error(errorDetails || `Failed to update order (${response.status})`);
   }
 
   return response.json();

@@ -43,6 +43,7 @@ import { API_BASE_URL } from "@/lib/api";
 type MerchantProps = {
   merchants: MerchantData[];
   setMerchants: Dispatch<SetStateAction<MerchantData[]>>;
+  categories: string[];
   searchTerm: string;
   createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
@@ -51,6 +52,7 @@ type MerchantProps = {
 function Merchant({
   merchants,
   setMerchants,
+  categories,
   searchTerm,
   createRequest,
   onCreateRequestHandled,
@@ -64,7 +66,6 @@ function Merchant({
   );
 
   const [merchantName, setMerchantName] = useState("");
-  const [brandName, setBrandName] = useState("");
   const [productType, setProductType] = useState("");
   const [status, setStatus] = useState("Available");
   const [image, setImage] = useState("");
@@ -79,9 +80,8 @@ function Merchant({
   const openAddModal = () => {
     setIsEditMode(false);
     setEditingMerchantId(null);
-
     setMerchantName("");
-    setBrandName("");
+    setMerchantName("");
     setProductType("");
     setStatus("Available");
     setImage("");
@@ -93,9 +93,8 @@ function Merchant({
   const openEditModal = (merchant: MerchantData) => {
     setIsEditMode(true);
     setEditingMerchantId(merchant.id);
-
     setMerchantName(merchant.merchantName);
-    setBrandName(merchant.brandName);
+    setMerchantName(merchant.merchantName);
     setProductType(merchant.productType);
     setStatus(merchant.status);
     setImage(merchant.image);
@@ -152,11 +151,7 @@ function Merchant({
     event.preventDefault();
 
     // Required fields must be filled before saving.
-    if (
-      !merchantName.trim() ||
-      !brandName.trim() ||
-      !productType
-    ) {
+    if (!merchantName.trim() || !productType) {
       setToastMessage(
         "Complete the required merchant fields before saving"
       );
@@ -169,8 +164,7 @@ function Merchant({
     };
 
     const merchantPayload = {
-      merchantName,
-      brandName,
+      merchantName: merchantName.trim(),
       productType,
       status,
       image,
@@ -183,7 +177,10 @@ function Merchant({
           {
             method: "PUT",
             headers: jsonHeaders,
-            body: JSON.stringify(merchantPayload),
+            body: JSON.stringify({
+              ...merchantPayload,
+              brandName: merchantName.trim(),
+            }),
           }
         );
 
@@ -215,12 +212,17 @@ function Merchant({
           {
             method: "POST",
             headers: jsonHeaders,
-            body: JSON.stringify(merchantPayload),
+            body: JSON.stringify({
+              ...merchantPayload,
+              brandName: merchantName.trim(),
+            }),
           }
         );
 
         if (!response.ok) {
-          throw new Error("Failed to create merchant");
+          throw new Error(
+            (await response.text()) || `Failed to create merchant (${response.status})`
+          );
         }
 
         // The backend returns the merchant including its MongoDB id.
@@ -237,14 +239,15 @@ function Merchant({
       } catch (error) {
         console.error("Failed to add merchant:", error);
 
-        setToastMessage("Unable to add merchant");
+        setToastMessage(
+          error instanceof Error ? error.message : "Unable to add merchant"
+        );
         return;
       }
     }
 
     // Reset the form after a successful save.
     setMerchantName("");
-    setBrandName("");
     setProductType("");
     setStatus("Available");
     setImage("");
@@ -292,9 +295,6 @@ function Merchant({
 
     const matchesSearch =
       merchant.merchantName
-        .toLowerCase()
-        .includes(searchValue) ||
-      merchant.brandName
         .toLowerCase()
         .includes(searchValue) ||
       merchant.productType
@@ -396,9 +396,9 @@ function Merchant({
                   Merchant Name
                 </TableHead>
 
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">
+                {/* <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">
                   Brand Name
-                </TableHead>
+                </TableHead> */}
 
                 <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">
                   Product Type
@@ -428,9 +428,9 @@ function Merchant({
                     {merchant.merchantName}
                   </TableCell>
 
-                  <TableCell className="px-[18px] py-3">
+                  {/* <TableCell className="px-[18px] py-3">
                     {merchant.brandName}
-                  </TableCell>
+                  </TableCell> */}
 
                   <TableCell className="px-[18px] py-3">
                     {merchant.productType}
@@ -519,7 +519,7 @@ function Merchant({
             />
           </div>
 
-          <div className="grid gap-2">
+          {/* <div className="grid gap-2">
             <Label htmlFor="merchant-brand">
               Brand Name
             </Label>
@@ -533,7 +533,7 @@ function Merchant({
               placeholder="Enter brand name"
               required
             />
-          </div>
+          </div> */}
 
           <div className="grid gap-2">
             <Label htmlFor="merchant-product-type">
@@ -557,21 +557,11 @@ function Merchant({
                   Select product type
                 </SelectItem>
 
-                <SelectItem value="Electronics">
-                  Electronics
-                </SelectItem>
-
-                <SelectItem value="Clothing">
-                  Clothing
-                </SelectItem>
-
-                <SelectItem value="Grocery">
-                  Grocery
-                </SelectItem>
-
-                <SelectItem value="Home & Living">
-                  Home & Living
-                </SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

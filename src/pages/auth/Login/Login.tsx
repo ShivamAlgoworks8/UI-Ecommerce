@@ -3,13 +3,15 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { API_BASE_URL } from "@/lib/api";
 
-// --- tiny local helpers so this file stays self-contained for now ---
+type FieldError = { name?: string; email?: string; password?: string };
 
-type FieldError = { email?: string; password?: string };
-
-function validate(email: string, password: string): FieldError {
+function validate(email: string, password: string, name?: string, isSignup = false): FieldError {
   const errors: FieldError = {};
+  if (isSignup && (!name || !name.trim())) {
+    errors.name = "Full name is required.";
+  }
   if (!email.trim()) {
     errors.email = "Email is required.";
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -23,16 +25,17 @@ function validate(email: string, password: string): FieldError {
   return errors;
 }
 
-// -------------------------------------------------------------------
-
 type LoginProps = {
   onLogin: () => void;
 };
 
 function Login({ onLogin }: LoginProps) {
+  const nameId = useId();
   const emailId = useId();
   const passwordId = useId();
 
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,13 +44,14 @@ function Login({ onLogin }: LoginProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const isSignup = mode === "signup";
   const hasErrors = Object.keys(errors).length > 0;
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitError(null);
 
-    const fieldErrors = validate(email, password);
+    const fieldErrors = validate(email, password, name, isSignup);
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
       return;
@@ -56,11 +60,54 @@ function Login({ onLogin }: LoginProps) {
     setErrors({});
     setIsSubmitting(true);
 
-    // TODO: wire up auth service / replace with real call
-    setTimeout(() => {
+    const endpoint = isSignup
+      ? `${API_BASE_URL}/api/auth/admin/signup`
+      : `${API_BASE_URL}/api/auth/admin/login`;
+
+    const payload = isSignup
+      ? { name: name.trim(), email: email.trim().toLowerCase(), password }
+      : { email: email.trim().toLowerCase(), password };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const fallback = response.status === 404
+          ? "Auth endpoint not found on the server. Please restart the backend."
+          : response.status >= 500
+            ? "Server error. Please try again later."
+            : isSignup ? "Signup failed. Please check your details." : "Invalid email or password";
+        // 400 responses carry field validation messages, e.g. {"password": "..."}
+        const fieldMessage = response.status === 400 && data && typeof data === "object" && !data.message
+          ? Object.values(data).filter((v) => typeof v === "string").join(" ")
+          : "";
+        setSubmitError(data.message || fieldMessage || fallback);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (data.token) {
+        localStorage.setItem("nexora_token", data.token);
+      }
+      if (data.name) {
+        localStorage.setItem("nexora_user", JSON.stringify(data));
+      }
+
       setIsSubmitting(false);
       onLogin();
-    }, 1200);
+    } catch (err) {
+      console.error("Admin auth error:", err);
+      setSubmitError("Unable to connect to the server. Please try again.");
+      setIsSubmitting(false);
+    }
   }
 
   function clearError(field: keyof FieldError) {
@@ -72,6 +119,12 @@ function Login({ onLogin }: LoginProps) {
       });
     }
   }
+
+  const switchMode = (newMode: "signin" | "signup") => {
+    setMode(newMode);
+    setErrors({});
+    setSubmitError(null);
+  };
 
   return (
     <div className="login-root">
@@ -135,9 +188,13 @@ function Login({ onLogin }: LoginProps) {
           </div>
 
           <header className="login-form-header">
-            <h2 className="login-form-title">Sign in to your account</h2>
+            <h2 className="login-form-title">
+              {isSignup ? "Create admin account" : "Sign in to your account"}
+            </h2>
             <p className="login-form-subtitle">
-              Enter your credentials to access the admin dashboard.
+              {isSignup
+                ? "Register a new administrator to manage the store workspace."
+                : "Enter your credentials to access the admin dashboard."}
             </p>
           </header>
 
@@ -147,7 +204,33 @@ function Login({ onLogin }: LoginProps) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} noValidate className="login-form" aria-label="Sign in form">
+          <form onSubmit={handleSubmit} noValidate className="login-form" aria-label="Admin auth form">
+            {/* Full Name for signup */}
+            {isSignup && (
+              <div className="login-field">
+                <Label htmlFor={nameId}>Full Name</Label>
+                <Input
+                  id={nameId}
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Admin Name"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    clearError("name");
+                  }}
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? `${nameId}-error` : undefined}
+                  disabled={isSubmitting}
+                />
+                {errors.name && (
+                  <span id={`${nameId}-error`} className="login-field-error" role="alert">
+                    {errors.name}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Email */}
             <div className="login-field">
               <Label htmlFor={emailId}>Email address</Label>
@@ -155,7 +238,7 @@ function Login({ onLogin }: LoginProps) {
                 id={emailId}
                 type="email"
                 autoComplete="email"
-                placeholder="you@company.com"
+                placeholder="admin@company.com"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -176,17 +259,13 @@ function Login({ onLogin }: LoginProps) {
             <div className="login-field">
               <div className="login-field-labelrow">
                 <Label htmlFor={passwordId}>Password</Label>
-                {/* TODO: wire forgot-password route once router is set up */}
-                <button type="button" className="login-forgot-link">
-                  Forgot password?
-                </button>
               </div>
 
               <div className="login-password-wrap">
                 <Input
                   id={passwordId}
                   type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  autoComplete={isSignup ? "new-password" : "current-password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => {
@@ -218,17 +297,18 @@ function Login({ onLogin }: LoginProps) {
               )}
             </div>
 
-            {/* Remember me */}
-            <label className="login-remember-row">
-              <input
-                type="checkbox"
-                className="login-checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={isSubmitting}
-              />
-              <span className="login-remember-label">Keep me signed in for 30 days</span>
-            </label>
+            {!isSignup && (
+              <label className="login-remember-row">
+                <input
+                  type="checkbox"
+                  className="login-checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={isSubmitting}
+                />
+                <span className="login-remember-label">Keep me signed in for 30 days</span>
+              </label>
+            )}
 
             <Button
               type="submit"
@@ -236,9 +316,38 @@ function Login({ onLogin }: LoginProps) {
               disabled={isSubmitting || hasErrors}
             >
               {isSubmitting && <Loader2 className="animate-spin" aria-hidden="true" />}
-              {isSubmitting ? "Signing in…" : "Sign in"}
+              {isSubmitting
+                ? (isSignup ? "Creating account…" : "Signing in…")
+                : (isSignup ? "Create admin account" : "Sign in")}
             </Button>
           </form>
+
+          {/* Toggle between Sign In and Sign Up */}
+          <div className="mt-6 text-center text-sm">
+            {isSignup ? (
+              <p className="text-muted-foreground">
+                Already have an admin account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className="font-medium text-primary hover:underline ml-1"
+                >
+                  Sign in
+                </button>
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                Need an admin account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="font-medium text-primary hover:underline ml-1"
+                >
+                  Create admin account
+                </button>
+              </p>
+            )}
+          </div>
 
           <footer className="login-form-footer">
             <p className="login-footer-note">

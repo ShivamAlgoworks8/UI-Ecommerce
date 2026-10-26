@@ -4,4 +4,6 @@ export type Customer = {
   email: string;
   phone: string;
   address: string;
+  role?: string;
+  status?: "Active" | "Inactive";
 };

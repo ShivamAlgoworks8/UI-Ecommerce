@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Bell, CheckCheck, ChevronRight, Search } from "lucide-react";
+import { useEffect, useRef, /* useState */ } from "react";
+import { ChevronRight, Search } from "lucide-react";
 import type { ThemeMode } from "@/app/types";
 import type { Notification } from "@/features/notification/types";
-import { Button } from "@/components/ui/button";
 import CreateMenu from "./CreateMenu";
 import UserMenu from "./UserMenu";
 
@@ -49,12 +48,16 @@ function AdminHeader({
   themeMode,
   onThemeChange,
   onLogout,
+  /*
   notifications = [],
   onClearNotifications,
+  */
 }: AdminHeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
+  /*
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  */
 
   const currentInfo = pageSectionMap[currentPage] ?? { section: "Admin", title: currentPage };
 
@@ -71,6 +74,7 @@ function AdminHeader({
     return () => document.removeEventListener("keydown", focusSearch);
   }, []);
 
+  /*
   useEffect(() => {
     if (!isNotifOpen) return;
     const closeOnOutside = (event: MouseEvent) => {
@@ -90,6 +94,7 @@ function AdminHeader({
   }, [isNotifOpen]);
 
   const activeCount = notifications.filter((n) => n.status === "Active").length;
+  */
 
   return (
     <header className="admin-topbar">
@@ -130,7 +135,7 @@ function AdminHeader({
         <CreateMenu onCreate={onCreate} />
 
         {/* Notifications Popover Trigger */}
-        <div className="admin-notification-wrapper" ref={notifRef}>
+        {/* <div className="admin-notification-wrapper" ref={notifRef}>
           <Button
             type="button"
             variant="ghost"
@@ -208,7 +213,7 @@ function AdminHeader({
               </footer>
             </div>
           )}
-        </div>
+        </div> */}
 
         <UserMenu themeMode={themeMode} onThemeChange={onThemeChange} onLogout={onLogout} />
       </div>

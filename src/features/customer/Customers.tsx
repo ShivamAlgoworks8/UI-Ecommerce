@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { API_BASE_URL } from "@/lib/api";
 import type { Customer } from "@/features/customer/types";
 import type { Order } from "@/features/order/types";
@@ -19,6 +20,8 @@ type CustomersProps = {
   setCustomers: Dispatch<SetStateAction<Customer[]>>;
   orders: Order[];
   payments: Payment[];
+  loading: boolean;
+  error: string;
   searchTerm: string;
 };
 
@@ -29,7 +32,7 @@ type CustomerRow = {
   paymentCount: number;
 };
 
-function Customers({ customers, setCustomers, orders, payments, searchTerm }: CustomersProps) {
+function Customers({ customers, setCustomers, orders, payments, loading, error, searchTerm }: CustomersProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [name, setName] = useState("");
@@ -38,6 +41,28 @@ function Customers({ customers, setCustomers, orders, payments, searchTerm }: Cu
   const [address, setAddress] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [customerStatuses, setCustomerStatuses] = useState<Record<string, "Active" | "Inactive">>({});
+
+  const handleStatusChange = async (id: string, newStatus: "Active" | "Inactive") => {
+    setCustomerStatuses((previous) => ({ ...previous, [id]: newStatus }));
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/customers/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (response.ok) {
+        setCustomers((previous) =>
+          previous.map((c) => (c.id === id ? { ...c, status: newStatus } : c)),
+        );
+      } else {
+        throw new Error("Failed to update status on server");
+      }
+    } catch (e) {
+      console.error("Failed to update customer status:", e);
+      setToastMessage("Failed to update customer status");
+    }
+  };
 
   const closeDrawer = () => {
     setIsDrawerOpen(false);
@@ -143,26 +168,12 @@ function Customers({ customers, setCustomers, orders, payments, searchTerm }: Cu
     }
   };
 
-  const observedNames = [...new Set([
-    ...orders.map((order) => order.customer),
-    ...payments.map((payment) => payment.customerName),
-  ].filter(Boolean))];
-  const customerRows: CustomerRow[] = [
-    ...customers.map((customer) => ({
-      key: `saved-${customer.id}`,
-      customer,
-      orderCount: orders.filter((order) => order.customer === customer.name).length,
-      paymentCount: payments.filter((payment) => payment.customerName === customer.name).length,
-    })),
-    ...observedNames
-      .filter((customerName) => !customers.some((customer) => customer.name === customerName))
-      .map((customerName) => ({
-        key: `observed-${customerName}`,
-        customer: { id: "", name: customerName, email: "", phone: "", address: "" },
-        orderCount: orders.filter((order) => order.customer === customerName).length,
-        paymentCount: payments.filter((payment) => payment.customerName === customerName).length,
-      })),
-  ];
+  const customerRows: CustomerRow[] = customers.map((customer) => ({
+    key: `saved-${customer.id}`,
+    customer,
+    orderCount: orders.filter((order) => order.customer === customer.name).length,
+    paymentCount: payments.filter((payment) => payment.customerName === customer.name).length,
+  }));
   const filteredCustomers = customerRows.filter(({ customer }) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -241,7 +252,11 @@ function Customers({ customers, setCustomers, orders, payments, searchTerm }: Cu
           </div>
         }
       >
-        {filteredCustomers.length === 0 ? (
+        {loading ? (
+          <p className="p-6 text-sm text-muted-foreground">Loading customers...</p>
+        ) : error ? (
+          <p className="p-6 text-sm text-destructive">{error}</p>
+        ) : filteredCustomers.length === 0 ? (
           <EmptyState
             title={customerRows.length === 0 ? "No customers yet" : "No customers found"}
             description={customerRows.length === 0 ? "Add a customer to manage the customer list." : "Try a different search."}
@@ -253,8 +268,10 @@ function Customers({ customers, setCustomers, orders, payments, searchTerm }: Cu
               <TableRow className="bg-background hover:bg-background">
                 <TableHead className="w-12 px-[18px]"><span className="sr-only">Select</span></TableHead>
                 <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Customer name</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Orders</TableHead>
-                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Payments</TableHead>
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Email</TableHead>
+                <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Status</TableHead>
+                {/* <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Orders</TableHead> */}
+                {/* <TableHead className="h-12 px-[18px] text-sm font-medium normal-case tracking-normal">Payments</TableHead> */}
                 <TableHead className="h-12 px-[18px] text-right text-sm font-medium normal-case tracking-normal">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -270,8 +287,25 @@ function Customers({ customers, setCustomers, orders, payments, searchTerm }: Cu
                     />
                   </TableCell>
                   <TableCell className="px-[18px] py-3 font-medium">{customer.name}</TableCell>
-                  <TableCell className="px-[18px] py-3">{orderCount}</TableCell>
-                  <TableCell className="px-[18px] py-3">{paymentCount}</TableCell>
+                  <TableCell className="px-[18px] py-3 text-sm text-muted-foreground">{customer.email}</TableCell>
+                  <TableCell className="px-[18px] py-3">
+                    <Select
+                      value={customerStatuses[customer.id || key] ?? "Active"}
+                      onValueChange={(value: "Active" | "Inactive") =>
+                        handleStatusChange(customer.id || key, value)
+                      }
+                    >
+                      <SelectTrigger className="w-[110px] h-8 text-xs" aria-label={`Status for ${customer.name}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  {/* <TableCell className="px-[18px] py-3">{orderCount}</TableCell> */}
+                  {/* <TableCell className="px-[18px] py-3">{paymentCount}</TableCell> */}
                   <TableCell className="px-[18px] py-3">
                     <div className="flex justify-end gap-4">
                       <button

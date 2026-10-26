@@ -4,8 +4,8 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Download,
-  Plus,
+  // Download,
+  // Plus,
   Trash2,
 } from "lucide-react";
 
@@ -57,10 +57,11 @@ function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestH
   
   // React Query - Fetch Orders
   // Load the current order list from the service.
-  const { data: fetchedOrders, error } = useQuery({
-  queryKey: ["orders"],
-  queryFn: getOrders,
-});
+  const { data: fetchedOrders, error, isLoading } = useQuery({
+    queryKey: ["orders"],
+    queryFn: getOrders,
+    retry: false,
+  });
 // Keep the shared order list in sync after creating an order.
 const createOrderMutation = useMutation({
   mutationFn: createOrder,
@@ -93,7 +94,7 @@ const updateOrderMutation = useMutation({
 
   onError: (error) => {
     console.error("Order update failed:", error);
-    setToastMessage("Failed to update order");
+    setToastMessage(error.message || "Failed to update order");
   },
 });
 useEffect(() => {
@@ -141,7 +142,7 @@ useEffect(() => {
     setAmount(String(order.amount));
     setPaymentStatus(order.paymentStatus);
     setOrderStatus(order.orderStatus);
-    setDate(order.date);
+    setDate(order.date.slice(0, 10));
     setIsModalOpen(true);
   };
 
@@ -314,6 +315,7 @@ const handleDelete = (id: string) => {
   });
 
   // Export the currently visible, sorted orders as a downloadable CSV.
+  /*
   const exportCSV = () => {
     if (sortedOrders.length === 0) return;
     const headers = ["Order ID", "Customer", "Product", "Amount", "Payment Status", "Order Status", "Date"];
@@ -336,6 +338,7 @@ const handleDelete = (id: string) => {
     URL.revokeObjectURL(url);
     setToastMessage("Orders exported to CSV");
   };
+  */
 
   // Order Selection
   // Keep selected IDs in step with individual and visible-row checkbox changes.
@@ -405,14 +408,14 @@ const handleDelete = (id: string) => {
         description="Fulfill, filter, and track customer shipments and transaction orders."
         action={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5" disabled={sortedOrders.length === 0}>
+            {/* <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5" disabled={sortedOrders.length === 0}>
               <Download className="size-4" />
               Export CSV
-            </Button>
-            <Button size="sm" onClick={openAddModal} className="gap-1.5 shadow-sm">
+            </Button> */}
+            {/* <Button size="sm" onClick={openAddModal} className="gap-1.5 shadow-sm">
               <Plus className="size-4" />
               Add Order
-            </Button>
+            </Button> */}
           </div>
         }
       />
@@ -466,9 +469,15 @@ const handleDelete = (id: string) => {
           </div>
         }
       >
-        {sortedOrders.length === 0 ? (
+        {isLoading ? (
+          <p className="p-6 text-sm text-muted-foreground">Loading orders...</p>
+        ) : error ? (
+          <p className="p-6 text-sm text-destructive">
+            {error instanceof Error ? error.message : "Unable to load orders"}
+          </p>
+        ) : sortedOrders.length === 0 ? (
           orders.length === 0
-            ? <EmptyState title="No orders yet" description="Add an order to see it listed here." action={<Button onClick={openAddModal}><Plus className="size-4 mr-1.5" />Add Order</Button>} />
+            ? <EmptyState title="No orders yet" description="Add an order to see it listed here." /* action={<Button onClick={openAddModal}><Plus className="size-4 mr-1.5" />Add Order</Button>} */ />
             : <EmptyState title="No orders match your filter" description="Try clearing dates or selecting a different status chip." />
         ) : (
           <Table>
@@ -582,10 +591,10 @@ const handleDelete = (id: string) => {
       >
         <form id="order-form" onSubmit={handleSubmit} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2"><Label htmlFor="order-id">Order ID</Label><Input id="order-id" value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="Enter order ID" required /></div>
+            <div className="grid gap-2"><Label htmlFor="order-id">Order ID</Label><Input id="order-id" value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="Enter order ID" readOnly={Boolean(editingOrder)} required />{editingOrder && <p className="text-xs text-muted-foreground">Order IDs cannot be changed after creation.</p>}</div>
             <div className="grid gap-2"><Label htmlFor="order-customer">Customer Name</Label><Input id="order-customer" value={customer} onChange={(event) => setCustomer(event.target.value)} placeholder="Enter customer name" required /></div>
             <div className="grid gap-2"><Label htmlFor="order-product">Product</Label><Input id="order-product" value={product} onChange={(event) => setProduct(event.target.value)} placeholder="Enter product name" required /></div>
-            <div className="grid gap-2"><Label htmlFor="order-amount">Amount</Label><Input id="order-amount" type="number" min="0" step="any" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" required /></div>
+            <div className="grid gap-2"><Label htmlFor="order-amount">Amount</Label><Input id="order-amount" type="number" min="0" step="any" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Enter amount" readOnly={Boolean(editingOrder)} required />{editingOrder && <p className="text-xs text-muted-foreground">The amount is set by the selected product.</p>}</div>
             <div className="grid gap-2">
               <Label htmlFor="order-payment-status">Payment Status</Label>
               <Select value={paymentStatus} onValueChange={(value: Order["paymentStatus"]) => setPaymentStatus(value)}>

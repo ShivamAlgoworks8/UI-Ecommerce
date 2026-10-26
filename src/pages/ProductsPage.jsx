@@ -4,23 +4,13 @@
  * Left sidebar with category checkboxes + price range slider.
  * Right: sort bar + product grid. Matches Urbanova mockup.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import products from "../data/products";
-import productCategories from "../data/categories";
+import { useAuth } from "../context/useAuth";
 
+const API_BASE_URL = "http://localhost:8080";
 const ALL_CATEGORIES = "All Categories";
-const categories = [ALL_CATEGORIES, ...productCategories];
-const minProductPrice = Math.floor(Math.min(...products.map((p) => p.price)));
-const maxProductPrice = Math.ceil(Math.max(...products.map((p) => p.price)));
-
-// Count products per category
-const categoryCounts = categories.reduce((acc, cat) => {
-    acc[cat] = cat === ALL_CATEGORIES
-        ? products.length
-        : products.filter((p) => p.category === cat).length;
-    return acc;
-}, {});
 
 const sortOptions = [
     { value: "default", label: "Newest First" },
@@ -36,11 +26,104 @@ export default function ProductsPage({
     searchQuery,
     onClearSearch,
 }) {
+    const { isAuthenticated, logout } = useAuth();
+    // Products will now come from the Spring Boot backend.
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [selectedCategories, setSelectedCategories] = useState([ALL_CATEGORIES]);
-    const [priceRange, setPriceRange] = useState(maxProductPrice);
+    const [priceRange, setPriceRange] = useState(0);
     const [sortOrder, setSortOrder] = useState("default");
     const [inStockOnly, setInStockOnly] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function fetchProducts() {
+            try {
+                setLoading(true);
+                setError("");
+
+                const token = localStorage.getItem("urbanova_token");
+
+                const response = await fetch(`${API_BASE_URL}/api/products`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && token) {
+                        logout();
+                        throw new Error("Your session has expired. Please sign in again.");
+                    }
+                    throw new Error("Unable to fetch products from backend.");
+                }
+
+                const data = await response.json();
+
+                // Convert Spring Boot product fields to the UI's field names.
+                const mappedProducts = data.map((product) => ({
+                    id: product.id,
+                    title: product.name,
+                    price: Number(product.price),
+                    category: product.productType || "Other",
+                    description: product.description || "",
+                    image: product.imageUrl || "",
+                    inStock: Number(product.stock) > 0,
+                    stock: Number(product.stock),
+                    rating: 0,
+                    reviewCount: 0,
+                    colors: [],
+                }));
+
+                if (isMounted) {
+                    setProducts(mappedProducts);
+                    setPriceRange(
+                        mappedProducts.length
+                            ? Math.ceil(Math.max(...mappedProducts.map((product) => product.price)))
+                            : 0
+                    );
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError(err.message || "Something went wrong.");
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        fetchProducts();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isAuthenticated, logout]);
+
+    const productCategories = [
+        ...new Set(products.map((product) => product.category)),
+    ];
+
+    const categories = [ALL_CATEGORIES, ...productCategories];
+
+    const minProductPrice = products.length
+        ? Math.floor(Math.min(...products.map((product) => product.price)))
+        : 0;
+
+    const maxProductPrice = products.length
+        ? Math.ceil(Math.max(...products.map((product) => product.price)))
+        : 0;
+
+    const categoryCounts = categories.reduce((acc, category) => {
+        acc[category] =
+            category === ALL_CATEGORIES
+                ? products.length
+                : products.filter((product) => product.category === category).length;
+
+        return acc;
+    }, {});
 
     const toggleCategory = (cat) => {
         if (cat === ALL_CATEGORIES) {
@@ -76,7 +159,7 @@ export default function ProductsPage({
         if (sortOrder === "price-high") return [...matched].sort((a, b) => b.price - a.price);
         if (sortOrder === "rating") return [...matched].sort((a, b) => (b.rating || 0) - (a.rating || 0));
         return matched;
-    }, [selectedCategories, priceRange, sortOrder, searchQuery, inStockOnly]);
+    }, [products, selectedCategories, priceRange, sortOrder, searchQuery, inStockOnly]);
 
     const clearFilters = () => {
         setSelectedCategories([ALL_CATEGORIES]);
@@ -184,9 +267,10 @@ export default function ProductsPage({
                                 max={maxProductPrice}
                                 value={priceRange}
                                 onChange={(e) => setPriceRange(Number(e.target.value))}
+                                disabled={minProductPrice === maxProductPrice}
                                 className="w-full"
                                 style={{
-                                    background: `linear-gradient(to right, #e94560 0%, #e94560 ${((priceRange - minProductPrice) / (maxProductPrice - minProductPrice)) * 100}%, #e5e7eb ${((priceRange - minProductPrice) / (maxProductPrice - minProductPrice)) * 100}%, #e5e7eb 100%)`
+                                    background: `linear-gradient(to right, #e94560 0%, #e94560 ${maxProductPrice === minProductPrice ? 100 : ((priceRange - minProductPrice) / (maxProductPrice - minProductPrice)) * 100}%, #e5e7eb ${maxProductPrice === minProductPrice ? 100 : ((priceRange - minProductPrice) / (maxProductPrice - minProductPrice)) * 100}%, #e5e7eb 100%)`
                                 }}
                             />
                             <div className="flex items-center justify-between mt-2">
@@ -273,7 +357,20 @@ export default function ProductsPage({
                     </div>
 
                     {/* Products Grid / Empty State */}
-                    {filteredProducts.length === 0 ? (
+                    {loading ? (
+                        <div className="min-h-[300px] flex items-center justify-center text-sm text-text-muted">
+                            Loading products...
+                        </div>
+                    ) : error ? (
+                        <div className="min-h-[300px] flex flex-col items-center justify-center gap-3 text-center text-sm text-red-600">
+                            <p>{error}</p>
+                            {!isAuthenticated && (
+                                <Link to="/login" className="font-semibold text-accent hover:underline">
+                                    Sign in
+                                </Link>
+                            )}
+                        </div>
+                    ) : filteredProducts.length === 0 ? (
                         <div className="min-h-[300px] flex items-center justify-center text-center px-6">
                             <div className="max-w-sm animate-fade-in-up">
                                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-soft flex items-center justify-center">

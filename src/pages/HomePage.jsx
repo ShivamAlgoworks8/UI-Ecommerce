@@ -2,15 +2,16 @@
  * HomePage — Redesigned (Urbanova 2026)
  * ───────────────────────────────────────
  * 1. Hero — split layout with left text + right full-bleed image + carousel dots
- * 2. Featured Products — 4-column grid with product cards
+ * 2. Featured Products — dynamically fetched from MongoDB backend
  * 3. Promo Banner — bold CTA section
- * 4. Trust Badges — 4-column icon strip (matches mockup footer section)
+ * 4. Trust Badges — 4-column icon strip
  */
 
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
-import products from "../data/products";
+
+const API_BASE_URL = "http://localhost:8080";
 
 const heroSlides = [
     {
@@ -84,10 +85,51 @@ const trustBadges = [
     },
 ];
 
-export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
-    const featuredProducts = products.slice(0, 4);
+export default function HomePage({ onAddToCart, wishlist = [], onToggleWishlist }) {
+    const [featuredProducts, setFeaturedProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [activeSlide, setActiveSlide] = useState(0);
     const currentSlide = heroSlides[activeSlide];
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function fetchFeatured() {
+            try {
+                setLoading(true);
+                const response = await fetch(`${API_BASE_URL}/api/products`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (isMounted) {
+                        const mapped = data.map((product) => ({
+                            id: product.id,
+                            title: product.name,
+                            price: Number(product.price),
+                            category: product.productType || "Other",
+                            description: product.description || "",
+                            image: product.imageUrl || "",
+                            inStock: Number(product.stock) > 0,
+                            stock: Number(product.stock),
+                            rating: 0,
+                            reviewCount: 0,
+                            colors: [],
+                        }));
+                        setFeaturedProducts(mapped.slice(0, 4));
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load featured products:", err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        }
+
+        fetchFeatured();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     return (
         <div>
@@ -186,18 +228,24 @@ export default function HomePage({ onAddToCart, wishlist, onToggleWishlist }) {
                     </div>
 
                     {/* Product Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-                        {featuredProducts.map((product, index) => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
-                                onAddToCart={onAddToCart}
-                                wishlist={wishlist}
-                                onToggleWishlist={onToggleWishlist}
-                                animationDelay={`delay-${(index + 1) * 100}`}
-                            />
-                        ))}
-                    </div>
+                    {loading ? (
+                        <div className="py-12 text-center text-text-muted">Loading products from backend...</div>
+                    ) : featuredProducts.length === 0 ? (
+                        <div className="py-12 text-center text-text-muted">No products available in the backend.</div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+                            {featuredProducts.map((product, index) => (
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                    onAddToCart={onAddToCart}
+                                    wishlist={wishlist}
+                                    onToggleWishlist={onToggleWishlist}
+                                    animationDelay={`delay-${(index + 1) * 100}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </section>
 

@@ -20,7 +20,7 @@ export default function SignupPage() {
     const { signup } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
 
@@ -30,23 +30,24 @@ export default function SignupPage() {
             return;
         }
 
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters long.");
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters long.");
             return;
         }
 
         setIsLoading(true);
-
-        // Simulate a small network delay
-        setTimeout(() => {
-            const result = signup(name, email, password);
+        try {
+            const result = await signup(name, email, password);
             if (result.success) {
                 navigate("/");
             } else {
                 setError(result.message);
             }
+        } catch {
+            setError("Unable to connect to the server. Please try again.");
+        } finally {
             setIsLoading(false);
-        }, 600);
+        }
     };
 
     return (

@@ -5,9 +5,11 @@
  * ratings, color swatches), features list, and related products.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import products from "../data/products";
+import { useAuth } from "../context/useAuth";
+
+const API_BASE_URL = "http://localhost:8080";
 
 function StarRating({ rating }) {
     const fullStars = Math.floor(rating);
@@ -29,30 +31,134 @@ function StarRating({ rating }) {
 
 export default function ProductDetailPage({ onAddToCart }) {
     const { id } = useParams();
-    const product = products.find((p) => p.id === Number(id));
+    const { isAuthenticated, logout } = useAuth();
+    const [product, setProduct] = useState(null);
+    const [relatedProducts, setRelatedProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [selectedColor, setSelectedColor] = useState(0);
     const [qty, setQty] = useState(1);
 
-    if (!product) {
+    useEffect(() => {
+        let active = true;
+
+        async function fetchProduct() {
+            try {
+                setLoading(true);
+                setError("");
+
+                const token = localStorage.getItem("urbanova_token");
+
+                const response = await fetch(
+                    `${API_BASE_URL}/api/products/${id}`,
+                    {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    }
+                );
+
+                if (!response.ok) {
+                    if (response.status === 401 && token) {
+                        logout();
+                        throw new Error("Your session has expired. Please sign in again.");
+                    }
+                    throw new Error(
+                        response.status === 404
+                            ? "Product not found"
+                            : "Unable to load product"
+                    );
+                }
+
+                const data = await response.json();
+
+                const mappedProduct = {
+                    id: data.id,
+                    merchantName: data.merchantName || "",
+                    title: data.name,
+                    price: Number(data.price),
+                    category: data.productType || "Other",
+                    description: data.description || "",
+                    image: data.imageUrl || "",
+                    stock: Number(data.stock),
+                    inStock: Number(data.stock) > 0,
+                    rating: 0,
+                    reviewCount: 0,
+                    colors: [],
+                };
+
+                if (active) setProduct(mappedProduct);
+            } catch (err) {
+                if (active) setError(err.message);
+            } finally {
+                if (active) setLoading(false);
+            }
+        }
+
+        fetchProduct();
+
+        return () => {
+            active = false;
+        };
+    }, [id, isAuthenticated, logout]);
+
+    useEffect(() => {
+        let active = true;
+
+        async function fetchRelatedProducts() {
+            try {
+                const token = localStorage.getItem("urbanova_token");
+
+                const response = await fetch(`${API_BASE_URL}/api/products`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                    }
+                    throw new Error("Unable to load related products");
+                }
+
+                const data = await response.json();
+                const mappedProducts = data.map((item) => ({
+                    id: item.id,
+                    title: item.name,
+                    price: Number(item.price),
+                    originalPrice: item.originalPrice
+                        ? Number(item.originalPrice)
+                        : undefined,
+                    image: item.imageUrl || "",
+                }));
+
+                if (active) {
+                    setRelatedProducts(mappedProducts);
+                }
+            } catch (err) {
+                console.error("Failed to load related products:", err);
+            }
+        }
+
+        fetchRelatedProducts();
+
+        return () => {
+            active = false;
+        };
+    }, [isAuthenticated, logout]);
+
+    if (loading) {
+        return <div className="p-10 text-center">Loading product...</div>;
+    }
+
+    if (error || !product) {
         return (
-            <div className="min-h-[50vh] flex items-center justify-center px-6">
-                <div className="text-center animate-fade-in-up max-w-sm">
-                    <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-surface-soft flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <h2 className="text-xl font-bold text-primary mb-2">Product Not Found</h2>
-                    <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-                        The product you're looking for doesn't exist or has been removed.
-                    </p>
-                    <Link
-                        to="/products"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover transition-all duration-300"
-                    >
-                        ← Back to Products
+            <div className="p-10 text-center">
+                <h2 className="text-xl font-bold">Product Not Found</h2>
+                <p>{error}</p>
+                {!isAuthenticated && (
+                    <Link to="/login" className="text-accent hover:underline">
+                        Sign in
                     </Link>
-                </div>
+                )}
+                <Link to="/products">Back to Products</Link>
             </div>
         );
     }
@@ -61,7 +167,9 @@ export default function ProductDetailPage({ onAddToCart }) {
     const discountPercent = hasDiscount
         ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
         : 0;
-    const relatedProducts = products.filter((p) => p.id !== product.id).slice(0, 4);
+    const filteredRelatedProducts = relatedProducts
+        .filter((relatedProduct) => String(relatedProduct.id) !== String(product.id))
+        .slice(0, 4);
 
     return (
         <div>
@@ -112,20 +220,41 @@ export default function ProductDetailPage({ onAddToCart }) {
                                 {product.title}
                             </h1>
 
-                            {/* Rating Row */}
-                            {product.rating && (
-                                <div className="flex items-center gap-2 mb-4">
-                                    <StarRating rating={product.rating} />
-                                    <span className="text-sm font-semibold text-star">{product.rating}</span>
-                                    <span className="text-sm text-text-muted">({product.reviewCount} reviews)</span>
-                                    <span className="ml-2 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">In Stock</span>
-                                </div>
-                            )}
+                            {/* Rating / Availability Row */}
+                            <div className="flex items-center gap-2 mb-4">
+                                {product.rating > 0 ? (
+                                    <>
+                                        <StarRating rating={product.rating} />
+                                        <span className="text-sm font-semibold text-star">
+                                            {product.rating}
+                                        </span>
+                                        <span className="text-sm text-text-muted">
+                                            ({product.reviewCount} reviews)
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-sm text-text-muted">
+                                        No ratings yet
+                                    </span>
+                                )}
+
+                                <span
+                                    className={`ml-2 text-xs font-semibold px-2 py-1 rounded-full ${
+                                        product.stock > 0
+                                            ? "text-green-600 bg-green-50"
+                                            : "text-red-600 bg-red-50"
+                                    }`}
+                                >
+                                    {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                                </span>
+                            </div>
 
                             {/* Price */}
                             <div className="flex items-baseline gap-3 mb-5">
                                 <p className="text-3xl font-bold text-primary">
-                                    ₹{product.price.toLocaleString("en-IN")}
+                                    {product.maxPrice
+                                        ? `₹${product.price.toLocaleString("en-IN")}–₹${product.maxPrice.toLocaleString("en-IN")}`
+                                        : `₹${product.price.toLocaleString("en-IN")}`}
                                 </p>
                                 {hasDiscount && (
                                     <span className="text-lg text-text-muted line-through">
@@ -193,7 +322,7 @@ export default function ProductDetailPage({ onAddToCart }) {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
                                     </svg>
-                                    Add to Cart — ₹{(product.price * qty).toLocaleString("en-IN")}
+                                    Add to Cart — {product.maxPrice ? "from " : ""}₹{(product.price * qty).toLocaleString("en-IN")}
                                 </button>
                             </div>
 
@@ -235,7 +364,7 @@ export default function ProductDetailPage({ onAddToCart }) {
                         </Link>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
-                        {relatedProducts.map((relatedProduct) => (
+                        {filteredRelatedProducts.map((relatedProduct) => (
                             <Link
                                 key={relatedProduct.id}
                                 to={`/product/${relatedProduct.id}`}

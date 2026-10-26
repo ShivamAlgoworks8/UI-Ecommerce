@@ -20,7 +20,7 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
 
@@ -31,17 +31,18 @@ export default function LoginPage() {
         }
 
         setIsLoading(true);
-
-        // Simulate a small network delay for realism
-        setTimeout(() => {
-            const result = login(email, password);
+        try {
+            const result = await login(email, password);
             if (result.success) {
                 navigate("/");
             } else {
                 setError(result.message);
             }
+        } catch {
+            setError("Unable to connect to the server. Please try again.");
+        } finally {
             setIsLoading(false);
-        }, 600);
+        }
     };
 
     return (

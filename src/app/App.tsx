@@ -13,7 +13,7 @@ import Payments from "@/features/payment/Payments";
 import Products from "@/features/product/Products";
 import type { Customer } from "@/features/customer/types";
 import type { MerchantData } from "@/features/merchant/types";
-import type { Notification } from "@/features/notification/types";
+// import type { Notification } from "@/features/notification/types";
 import type { Order } from "@/features/order/types";
 import type { Payment } from "@/features/payment/types";
 import type { ProductData } from "@/features/product/types";
@@ -82,7 +82,7 @@ function App() {
       active = false;
     };
   }, []);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // const [notifications, setNotifications] = useState<Notification[]>([]);
   const [products, setProducts] = useState<ProductData[]>([]);
 
   useEffect(() => {
@@ -267,8 +267,10 @@ function App() {
           themeMode={themeMode}
           onThemeChange={handleThemeChange}
           onLogout={() => setIsLoggedIn(false)}
-          notifications={notifications}
-          onClearNotifications={() => setNotifications([])}
+          {...{
+            // notifications={notifications}
+            // onClearNotifications={() => setNotifications([])}
+          }}
         />
         <div className="page-content">
           <section hidden={currentPage !== "dashboard"}>
@@ -278,7 +280,9 @@ function App() {
               orderCount={orders.length}
               productCount={products.length}
               totalPayments={payments.reduce((total, payment) => total + payment.paymentAmount, 0)}
-              notificationCount={notifications.length}
+              {...{
+                // notificationCount={notifications.length}
+              }}
             />
           </section>
 

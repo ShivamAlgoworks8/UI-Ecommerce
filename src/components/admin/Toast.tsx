@@ -1,11 +1,10 @@
-import { useEffect } from "react";
-
 type ToastProps = {
   message: string | null;
   onDismiss: () => void;
 };
 
-function Toast({ message, onDismiss }: ToastProps) {
+function Toast(_props: ToastProps) {
+  /*
   useEffect(() => {
     if (!message) return;
     const timeoutId = window.setTimeout(onDismiss, 2600);
@@ -19,6 +18,8 @@ function Toast({ message, onDismiss }: ToastProps) {
       {message}
     </div>
   );
+  */
+  return null;
 }
 
 export default Toast;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, /* useState */ } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import type { ThemeMode } from "@/app/types";
-import type { Notification } from "@/features/notification/types";
+// import type { Notification } from "@/features/notification/types";
 import CreateMenu from "./CreateMenu";
 import UserMenu from "./UserMenu";
 
@@ -14,8 +14,8 @@ type AdminHeaderProps = {
   themeMode: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
   onLogout: () => void;
-  notifications?: Notification[];
-  onClearNotifications?: () => void;
+  // notifications?: Notification[];
+  // onClearNotifications?: () => void;
 };
 
 const pageSectionMap: Record<string, { section: string; title: string }> = {
@@ -33,7 +33,7 @@ const searchLabels: Record<string, string> = {
   products: "products",
   orders: "orders",
   payments: "payments",
-  notifications: "notifications",
+  // notifications: "notifications",
   merchant: "merchants",
   customers: "customers",
   categories: "categories",
@@ -49,8 +49,8 @@ function AdminHeader({
   onThemeChange,
   onLogout,
   /*
-  notifications = [],
-  onClearNotifications,
+  // notifications = [],
+  // onClearNotifications,
   */
 }: AdminHeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);

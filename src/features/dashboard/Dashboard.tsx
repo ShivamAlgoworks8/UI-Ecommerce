@@ -296,7 +296,7 @@ type DashboardProps = {
   orderCount: number;
   productCount: number;
   totalPayments: number;
-  notificationCount: number;
+  // notificationCount: number;
 };
 
 function Dashboard(_props: DashboardProps) {

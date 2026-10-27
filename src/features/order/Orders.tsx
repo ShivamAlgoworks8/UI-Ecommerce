@@ -22,7 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Order } from "@/features/order/types";
 import type { CreateRequest } from "@/app/types";
 import { formatINR } from "@/lib/utils";
-import { useMutation, useQuery } from "@tanstack/react-query";import {
+
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
   createOrder,
   deleteOrder,
   deleteOrders,
@@ -36,6 +38,20 @@ type OrdersProps = {
   searchTerm: string;
   createRequest: CreateRequest | null;
   onCreateRequestHandled: (id: number) => void;
+};
+// Displays order dates in DD/MM/YYYY format.
+const formatOrderDate = (value: string) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
 };
 
 function Orders({ orders, setOrders, searchTerm, createRequest, onCreateRequestHandled }: OrdersProps) {
@@ -165,6 +181,12 @@ useEffect(() => {
       paymentStatus,
       orderStatus,
       date,
+      ...(editingOrder && {
+        quantity: editingOrder.quantity,
+        items: editingOrder.items,
+        paymentMethod: editingOrder.paymentMethod,
+        deliveryAddress: editingOrder.deliveryAddress,
+      }),
     };
 try {
  if (editingOrder) {
@@ -517,6 +539,8 @@ const handleDelete = (id: string) => {
                     )}
                   </div>
                 </TableHead>
+                <TableHead>Delivery Address</TableHead>
+                <TableHead>Phone Number</TableHead>
                 <TableHead className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</TableHead>
                 <TableHead
                   className="h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
@@ -562,13 +586,21 @@ const handleDelete = (id: string) => {
                   </TableCell>
                   <TableCell className="px-4 py-3 font-semibold text-sm">{order.orderId}</TableCell>
                   <TableCell className="px-4 py-3 text-sm">{order.customer}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
+                    {order.deliveryAddress
+                      ? `${order.deliveryAddress.street}, ${order.deliveryAddress.city}, ${order.deliveryAddress.state}, ${order.deliveryAddress.pincode}`
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
+                    {order.deliveryAddress?.phone || "—"}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-muted-foreground">{order.product}</TableCell>
                   <TableCell className="whitespace-nowrap px-4 py-3 font-medium text-sm">
                     {formatINR(order.amount)}
                   </TableCell>
                   <TableCell className="px-4 py-3"><StatusPill status={order.paymentStatus} /></TableCell>
                   <TableCell className="px-4 py-3"><StatusPill status={order.orderStatus} /></TableCell>
-                  <TableCell className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{order.date}</TableCell>
+                  <TableCell className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatOrderDate(order.date)}</TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="flex justify-end gap-3">
                       <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => openEditModal(order)}>Edit</button>

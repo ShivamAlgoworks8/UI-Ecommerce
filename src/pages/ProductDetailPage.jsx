@@ -121,6 +121,7 @@ export default function ProductDetailPage({ onAddToCart }) {
                 const data = await response.json();
                 const mappedProducts = data.map((item) => ({
                     id: item.id,
+                    merchantName: item.merchantName || "",
                     title: item.name,
                     price: Number(item.price),
                     originalPrice: item.originalPrice
@@ -216,6 +217,11 @@ export default function ProductDetailPage({ onAddToCart }) {
                             </span>
 
                             {/* Title */}
+                            {product.merchantName && (
+                                <p className="text-sm font-medium text-primary mb-1">
+                                    {product.merchantName}
+                                </p>
+                            )}
                             <h1 className="text-2xl lg:text-3xl font-bold text-primary tracking-tight mb-3">
                                 {product.title}
                             </h1>
@@ -379,6 +385,11 @@ export default function ProductDetailPage({ onAddToCart }) {
                                     />
                                 </div>
                                 <div className="p-3">
+                                    {relatedProduct.merchantName && (
+                                        <p className="text-xs text-primary truncate mb-1">
+                                            {relatedProduct.merchantName}
+                                        </p>
+                                    )}
                                     <h4 className="text-sm font-semibold text-primary truncate group-hover:text-accent transition-colors duration-200 mb-1">
                                         {relatedProduct.title}
                                     </h4>

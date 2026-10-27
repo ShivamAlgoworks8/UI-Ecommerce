@@ -153,6 +153,11 @@ export default function ProductCard({
             {/* Product Information */}
             <div className="p-3 sm:p-4">
                 <Link to={`/product/${product.id}`}>
+                    {product.merchantName && (
+                        <p className="text-xs text-primary mb-1 truncate">
+                            {product.merchantName}
+                        </p>
+                    )}
                     <h3 className="text-sm font-semibold text-primary mb-1.5 hover:text-accent transition-colors duration-200 line-clamp-1 leading-tight">
                         {product.title || "Untitled Product"}
                     </h3>

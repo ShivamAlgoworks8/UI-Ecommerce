@@ -1,19 +1,11 @@
 /**
  * App Component — Root of the Application
- * ─────────────────────────────────────────
- * Manages the global cart state (useState) and sets up
- * React Router routes for all pages. The cart state and
- * handler functions are passed down as props to pages.
- *
- * Route structure:
- *  /            → HomePage
- *  /products    → ProductsPage
- *  /product/:id → ProductDetailPage
- *  /cart        → CartPage
+ * Manages the global cart and wishlist state and configures routes.
  */
 
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import CheckoutPage from "./pages/CheckoutPage";
 
 // Auth Context
 import { AuthProvider } from "./context/AuthContext";
@@ -35,45 +27,35 @@ import SignupPage from "./pages/SignupPage";
 import ScrollToTop from "./components/ScrollToTop";
 
 export default function App() {
-  /**
-   * Cart state — array of product objects, each extended
-   * with a `quantity` property. Using useState as required.
-   * Example cart item: { id, title, price, image, category, quantity }
-   */
+  // Stores cart items and their quantities.
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /**
-   * addToCart — Adds a product to the cart.
-   * If the product is already in the cart, increments its quantity.
-   * Otherwise, adds it with quantity = 1.
-   */
+  // Adds a product to the cart or increments its existing quantity.
   const addToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
+
       if (existingItem) {
-        // Product already in cart — increment quantity
         return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      // New product — add with quantity 1
+
       return [...prevCart, { ...product, quantity: 1 }];
     });
   };
 
-  /**
-   * updateQuantity — Updates the quantity of a cart item.
-   * If the new quantity is 0 or less, removes the item.
-   */
+  // Updates a cart item's quantity and removes it if the quantity is zero.
   const updateQuantity = (productId, newQuantity) => {
     if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
     }
+
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === productId ? { ...item, quantity: newQuantity } : item
@@ -81,31 +63,38 @@ export default function App() {
     );
   };
 
-  /**
-   * removeFromCart — Removes a product entirely from the cart.
-   */
+  // Removes a product from the cart.
   const removeFromCart = (productId) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
 
+  // Clears the cart after an order is successfully placed.
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  // Adds a product to the wishlist or removes it if already present.
   const toggleWishlist = (product) => {
     setWishlist((prevWishlist) => {
-      const isWishlisted = prevWishlist.some((item) => item.id === product.id);
+      const isWishlisted = prevWishlist.some(
+        (item) => item.id === product.id
+      );
+
       return isWishlisted
         ? prevWishlist.filter((item) => item.id !== product.id)
         : [...prevWishlist, product];
     });
   };
 
-  // Total number of items in cart (sum of quantities)
+  // Calculates the total number of items in the cart.
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <AuthProvider>
       <Router>
         <ScrollToTop />
+
         <div className="min-h-screen flex flex-col">
-          {/* ── Sticky Navbar ── */}
           <Navbar
             cartCount={cartCount}
             wishlistCount={wishlist.length}
@@ -113,7 +102,6 @@ export default function App() {
             onSearchChange={setSearchQuery}
           />
 
-          {/* ── Page Content (grows to fill remaining space) ── */}
           <main className="flex-grow">
             <Routes>
               <Route
@@ -126,6 +114,7 @@ export default function App() {
                   />
                 }
               />
+
               <Route
                 path="/products"
                 element={
@@ -138,10 +127,12 @@ export default function App() {
                   />
                 }
               />
+
               <Route
                 path="/product/:id"
                 element={<ProductDetailPage onAddToCart={addToCart} />}
               />
+
               <Route
                 path="/cart"
                 element={
@@ -152,6 +143,19 @@ export default function App() {
                   />
                 }
               />
+
+              <Route
+                path="/checkout"
+                element={
+                  <CheckoutPage
+                    cart={cart}
+                    onClearCart={clearCart}
+                    onUpdateQuantity={updateQuantity}
+                    onRemoveFromCart={removeFromCart}
+                  />
+                }
+              />
+
               <Route
                 path="/wishlist"
                 element={
@@ -162,12 +166,12 @@ export default function App() {
                   />
                 }
               />
+
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
             </Routes>
           </main>
 
-          {/* ── Footer ── */}
           <Footer />
         </div>
       </Router>

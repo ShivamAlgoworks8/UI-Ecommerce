@@ -103,6 +103,7 @@ export default function HomePage({ onAddToCart, wishlist = [], onToggleWishlist 
                     if (isMounted) {
                         const mapped = data.map((product) => ({
                             id: product.id,
+                            merchantName: product.merchantName || "",
                             title: product.name,
                             price: Number(product.price),
                             category: product.productType || "Other",

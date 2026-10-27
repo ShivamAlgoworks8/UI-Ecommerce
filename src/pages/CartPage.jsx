@@ -5,8 +5,10 @@
  */
 
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function CartPage({ cart, onUpdateQuantity, onRemoveFromCart }) {
+    const navigate = useNavigate();
     const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const freeShippingThreshold = 999;
@@ -85,6 +87,11 @@ export default function CartPage({ cart, onUpdateQuantity, onRemoveFromCart }) {
                                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                                             <div>
                                                 <Link to={`/product/${item.id}`}>
+                                                    {item.merchantName && (
+                                                        <p className="text-xs text-primary truncate">
+                                                            {item.merchantName}
+                                                        </p>
+                                                    )}
                                                     <h3 className="font-semibold text-primary text-sm hover:text-accent transition-colors duration-200 line-clamp-1">
                                                         {item.title}
                                                     </h3>
@@ -193,6 +200,7 @@ export default function CartPage({ cart, onUpdateQuantity, onRemoveFromCart }) {
                                 {/* Checkout Button */}
                                 <button
                                     id="checkout-btn"
+                                    onClick={() => navigate("/checkout")}
                                     className="w-full py-3.5 bg-accent text-white text-sm font-bold rounded-xl hover:bg-accent-hover transition-all duration-300 hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98] cursor-pointer mb-3"
                                 >
                                     Proceed to Checkout

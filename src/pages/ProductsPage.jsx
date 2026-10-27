@@ -64,6 +64,7 @@ export default function ProductsPage({
                 // Convert Spring Boot product fields to the UI's field names.
                 const mappedProducts = data.map((product) => ({
                     id: product.id,
+                    merchantName: product.merchantName || "",
                     title: product.name,
                     price: Number(product.price),
                     category: product.productType || "Other",

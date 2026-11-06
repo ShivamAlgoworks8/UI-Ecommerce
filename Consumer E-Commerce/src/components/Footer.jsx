@@ -1,11 +1,4 @@
-/**
- * Footer Component — Redesigned (Urbanova 2026)
- * ───────────────────────────────────────────────
- * Trust badges strip + 4-column footer with social links,
- * quick links, support links, brand description, and
- * payment method logos. Matches Urbanova mockup.
- */
-
+ //Footer Component
 import { Link } from "react-router-dom";
 
 const footerLinks = {

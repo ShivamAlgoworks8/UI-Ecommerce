@@ -1,10 +1,4 @@
-/**
- * Navbar Component — Redesigned (Urbanova 2026)
- * ──────────────────────────────────────────────
- * White background navbar with logo, nav links,
- * search bar, and action icons (wishlist, cart, user).
- * Matches the Urbanova mockup design.
- */
+//Navbar Component
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
